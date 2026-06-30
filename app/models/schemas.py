@@ -1,31 +1,119 @@
 """
-Pydantic 数据模型 — SkillScan 审核结果的所有数据结构
-严格按照 Skill-Vetter 协议定义各审核维度的输出格式
+Pydantic 数据模型 — SkillScan TRACE 评测体系
+
+TRACE 五维度:
+  T - Trust（可信任度）: 安全检测、最小权限、敏感信息保护、国内可用性、中文支持
+  R - Reliability（可靠性）: 稳定运行、一致结果、边界输入处理、异常反馈机制
+  A - Adaptability（适用性）: 场景匹配度、触发条件清晰度、能力边界界定、输入输出规范性
+  C - Convention（规范性）: 渐进式披露、文档结构清晰度、限制说明完整性、示例充分性
+  E - Effectiveness（有效性）: 结果正确性、输出完整性、可直接使用性、减少返工率
+
+每个维度 4 个子指标，每项 0-5 分。LLM 进行语义级别分析。
 """
 from __future__ import annotations
-
 from enum import Enum
-from typing import Optional
 from pydantic import BaseModel, Field
 
 
-# ─── 风险等级 ───────────────────────────────────────────
+# ═══════════════════════════════════════════════════════
+# TRACE 评分维度配置
+# ═══════════════════════════════════════════════════════
 
-class RiskLevel(str, Enum):
-    LOW = "LOW"
-    MEDIUM = "MEDIUM"
-    HIGH = "HIGH"
-    EXTREME = "EXTREME"
+class TraceDimension(str, Enum):
+    TRUST = "trust"
+    RELIABILITY = "reliability"
+    ADAPTABILITY = "adaptability"
+    CONVENTION = "convention"
+    EFFECTIVENESS = "effectiveness"
+
+
+TRACE_DISPLAY: dict[str, str] = {
+    "trust": "可信任度",
+    "reliability": "可靠性",
+    "adaptability": "适用性",
+    "convention": "规范性",
+    "effectiveness": "有效性",
+}
+
+TRACE_LETTER: dict[str, str] = {
+    "trust": "T", "reliability": "R", "adaptability": "A",
+    "convention": "C", "effectiveness": "E",
+}
+
+TRACE_COLORS: dict[str, str] = {
+    "trust": "#3b82f6", "reliability": "#10b981",
+    "adaptability": "#f59e0b", "convention": "#8b5cf6",
+    "effectiveness": "#ef4444",
+}
+
+# 每个维度的 4 个子指标
+TRACE_SUB_INDICATORS: dict[str, list[dict[str, str]]] = {
+    "trust": [
+        {"key": "security", "name": "安全检测", "desc": "是否通过安全审查，有无漏洞"},
+        {"key": "minimal_permission", "name": "最小权限", "desc": "是否遵循最小权限原则"},
+        {"key": "sensitive_data", "name": "敏感信息保护", "desc": "是否妥善保护用户敏感数据"},
+        {"key": "availability", "name": "国内可用性", "desc": "是否在国内网络环境可用"},
+    ],
+    "reliability": [
+        {"key": "stability", "name": "稳定运行", "desc": "是否能在正常条件下稳定运行"},
+        {"key": "consistency", "name": "一致结果", "desc": "相同输入是否产生一致输出"},
+        {"key": "edge_cases", "name": "边界输入处理", "desc": "对边界/异常输入的容错能力"},
+        {"key": "error_feedback", "name": "异常反馈机制", "desc": "遇到错误时是否有清晰的反馈"},
+    ],
+    "adaptability": [
+        {"key": "scene_match", "name": "场景匹配度", "desc": "功能与目标场景的匹配程度"},
+        {"key": "trigger_clarity", "name": "触发条件清晰度", "desc": "触发使用条件的明确性"},
+        {"key": "capability_boundary", "name": "能力边界界定", "desc": "是否清晰界定能做/不能做什么"},
+        {"key": "io_standard", "name": "输入输出规范性", "desc": "输入输出格式是否规范"},
+    ],
+    "convention": [
+        {"key": "progressive_disclosure", "name": "渐进式披露", "desc": "文档是否循序渐进披露信息"},
+        {"key": "doc_structure", "name": "文档结构清晰度", "desc": "SKILL.md 组织结构是否清晰"},
+        {"key": "limitation_completeness", "name": "限制说明完整性", "desc": "是否完整说明能力和限制"},
+        {"key": "example_sufficiency", "name": "示例充分性", "desc": "是否提供充分的典型示例"},
+    ],
+    "effectiveness": [
+        {"key": "correctness", "name": "结果正确性", "desc": "输出结果是否正确"},
+        {"key": "completeness", "name": "输出完整性", "desc": "输出是否完整无缺失"},
+        {"key": "direct_usability", "name": "可直接使用性", "desc": "输出是否可直接使用"},
+        {"key": "rework_reduction", "name": "减少返工率", "desc": "是否能减少后续返工"},
+    ],
+}
+
+
+# ═══════════════════════════════════════════════════════
+# 技能分类
+# ═══════════════════════════════════════════════════════
+
+class SkillCategory(str, Enum):
+    AI_AGENT = "aiAgent"
+    IT_OPS_SECURITY = "itOpsSecurity"
+    DEVELOPMENT = "development"
+    DATA_ANALYSIS = "dataAnalysis"
+    CONTENT_CREATION = "contentCreation"
+    OFFICE_EFFICIENCY = "officeEfficiency"
+    OTHERS = "others"
 
     @classmethod
-    def display(cls, level: str) -> str:
-        return {"LOW": "🟢 低风险", "MEDIUM": "🟡 中风险",
-                "HIGH": "🔴 高风险", "EXTREME": "⛔ 极高风险"}.get(level, level)
+    def display(cls, value: str) -> str:
+        return {
+            "aiAgent": "AI 智能", "itOpsSecurity": "IT 运维/安全",
+            "development": "开发工具", "dataAnalysis": "数据分析",
+            "contentCreation": "内容创作", "officeEfficiency": "办公效率",
+            "others": "其他",
+        }.get(value, value)
 
-    @classmethod
-    def color(cls, level: str) -> str:
-        return {"LOW": "#22c55e", "MEDIUM": "#eab308",
-                "HIGH": "#ef4444", "EXTREME": "#7c3aed"}.get(level, "#6b7280")
+
+CATEGORY_DISPLAY_MAP = {c.value: SkillCategory.display(c.value) for c in SkillCategory}
+
+# ═══════════════════════════════════════════════════════
+# 审核结论
+# ═══════════════════════════════════════════════════════
+
+class SecurityLevel(str, Enum):
+    SAFE = "安全"
+    POTENTIAL_RISK = "存在潜在风险"
+    UNSAFE = "不安全"
 
 
 class Verdict(str, Enum):
@@ -34,155 +122,94 @@ class Verdict(str, Enum):
     REJECT = "淘汰"
 
 
-# ─── 审核维度（5 个评分维度）─────────────────────────────
+# ═══════════════════════════════════════════════════════
+# TRACE 审核结果数据模型
+# ═══════════════════════════════════════════════════════
 
-class AuditDimension(str, Enum):
-    SOURCE_TRUST = "source_trust"       # 来源可信度
-    NETWORK_ISOLATION = "network_isolation"  # 网络隔离度
-    PERMISSION_MINIMALITY = "permission_minimality"  # 权限最小化
-    CODE_SECURITY = "code_security"      # 代码安全性
-    OFFLINE_COMPAT = "offline_compat"    # 离线兼容性
+class SubIndicatorScore(BaseModel):
+    """单个子指标评分"""
+    key: str
+    name: str          # 中文名称
+    score: int = Field(ge=0, le=5, default=3)
+    comment: str = ""  # LLM 评价理由
 
-
-DIMENSION_DISPLAY = {
-    "source_trust": "来源可信度",
-    "network_isolation": "网络隔离度",
-    "permission_minimality": "权限最小化",
-    "code_security": "代码安全性",
-    "offline_compat": "离线兼容性",
-}
-
-DIMENSION_ICONS = {
-    "source_trust": "🔐",
-    "network_isolation": "🌐",
-    "permission_minimality": "🔑",
-    "code_security": "🛡️",
-    "offline_compat": "📡",
-}
-
-
-# ─── 请求模型 ───────────────────────────────────────────
-
-class ScanRequest(BaseModel):
-    """单技能扫描请求（上传 zip 文件）"""
-    pass  # file handled via UploadFile in route
-
-
-class BatchScanResponse(BaseModel):
-    """批量扫描响应包装"""
-    scan_id: str
-    total_scanned: int
-    passed: int
-    conditional: int
-    rejected: int
-    results: list[SkillScanResult]
-    report_html_path: str = ""
-
-
-# ─── 来源检查结果 ────────────────────────────────────────
-
-class SourceCheckResult(BaseModel):
-    """Phase 3 Source Check 结果"""
-    source: str = "SkillHub"
-    author_name: str = ""
-    stars: int = 0
-    author_trust_level: int = Field(default=1, ge=1, le=5,
-        description="1-未知作者 2-新作者(<100星) 3-已知作者 4-高星(1000+) 5-官方/已验证")
-    last_updated: str = ""
-    category_match: bool = True
-    category_mismatch_detail: str = ""
-    trust_score: int = Field(default=1, ge=1, le=5,
-        description="综合可信度 1=不可信 5=完全可信")
-    details: dict = Field(default_factory=dict)
-
-
-# ─── 红牌规则命中 ────────────────────────────────────────
-
-class RedFlagHit(BaseModel):
-    """单条红牌规则命中记录"""
-    rule_id: str          # R1-R15
-    rule_name: str        # 规则名称
-    description: str      # 规则描述
-    file_path: str        # 命中文件路径
-    matched_content: str  # 命中的代码片段（截取前 200 字）
-    line_number: int = 0
-    severity: str = "EXTREME"
-
-
-# ─── 权限范围分析 ────────────────────────────────────────
-
-class PermissionScope(BaseModel):
-    """权限范围分析结果"""
-    file_read_patterns: list[str] = Field(default_factory=list)
-    file_write_patterns: list[str] = Field(default_factory=list)
-    commands_detected: list[str] = Field(default_factory=list)
-    network_requirement: str = "None"
-    network_detail: str = ""
-    scope_matches_function: bool = True
-    scope_mismatch_detail: str = ""
-    has_dangerous_commands: bool = False
-    dangerous_commands: list[str] = Field(default_factory=list)
-
-
-# ─── 五维度评分 ──────────────────────────────────────────
 
 class DimensionScore(BaseModel):
-    """单个维度的 5 分制评分"""
-    dimension: str                          # AuditDimension value
-    score: int = Field(default=3, ge=1, le=5)
-    max_score: int = 5
-    display_name: str = ""                  # 中文显示名
-    icon: str = ""                          # emoji icon
-    reason: str = ""                        # 评分理由
-    findings: list[str] = Field(default_factory=list)  # 具体发现
+    """单个 TRACE 维度的完整评分"""
+    dimension: str            # trust / reliability / adaptability / convention / effectiveness
+    letter: str               # T / R / A / C / E
+    display_name: str         # 可信任度 / 可靠性 ...
+    score: float = Field(ge=0.0, le=5.0, default=3.0)  # 维度平均分
+    sub_indicators: list[SubIndicatorScore] = Field(default_factory=list)
+    findings_summary: str = ""  # LLM 分析摘要
 
 
-# ─── 完整扫描结果 ────────────────────────────────────────
+class SecurityFinding(BaseModel):
+    """安全审查发现"""
+    severity: str = "info"       # info / warning / critical
+    category: str = ""           # 供应链风险 / 命令执行 / 网络请求 / 文件操作 / Prompt注入
+    description: str = ""
+    file_path: str = ""
+    suggestion: str = ""
+
+
+class ClassificationResult(BaseModel):
+    """分类检测结果"""
+    detected_category: str = "others"
+    category_display: str = "其他"
+    confidence: float = 0.0
+    category_scores: dict[str, float] = Field(default_factory=dict)
+    detection_method: str = "default"
+    evidence: list[str] = Field(default_factory=list)
+
 
 class SkillScanResult(BaseModel):
-    """单个技能的完整静态分析结果"""
+    """单个技能的完整 TRACE 审核结果 — 与 HTML 模板字段一一对应"""
+    # ── 基础信息 ──
     slug: str
     name: str = ""
-    category: str = ""
     description_zh: str = ""
     stars: int = 0
+    author: str = ""
+    version: str = ""
+    downloads: int = 0
+    updated_at: str = ""
 
-    # 三部分审查结果
-    source_check: SourceCheckResult = Field(default_factory=SourceCheckResult)
-    red_flag_hits: list[RedFlagHit] = Field(default_factory=list)
-    permission_scope: PermissionScope = Field(default_factory=PermissionScope)
+    # ── 分类 ──
+    original_category: str = ""
+    detected_category: str = "others"
+    detected_category_display: str = "其他"
+    detected_category_confidence: float = 0.0
+    classification: ClassificationResult = Field(default_factory=ClassificationResult)
 
-    # 综合评分
-    dimension_scores: list[DimensionScore] = Field(default_factory=list)
-    total_score: float = Field(default=0.0, ge=0.0, le=5.0,
-        description="五维度加权平均分")
+    # ── TRACE 五维度评分 ──
+    trace_scores: list[DimensionScore] = Field(default_factory=list)
+    overall_score: float = Field(default=0.0, ge=0.0, le=5.0)  # AI 综合评分
 
-    # 最终判定
-    risk_level: RiskLevel = RiskLevel.LOW
-    verdict: Verdict = Verdict.PASS
+    # ── 安全审查 ──
+    security_level: str = "安全"         # 安全 / 存在潜在风险 / 不安全
+    security_findings: list[SecurityFinding] = Field(default_factory=list)
+    security_labs: list[dict] = Field(default_factory=list)  # 三线审核标记
 
-    # 元信息
+    # ── 审查结论 ──
+    verdict: str = "通过"                # 通过 / 有条件通过 / 淘汰
+    verdict_reason: str = ""             # 结论理由
+
+    # ── 元信息 ──
     files_scanned: int = 0
+    total_lines: int = 0
     scan_duration_ms: int = 0
-    summary: str = ""
 
 
-# ─── 报告 HTML 上下文模型 ────────────────────────────────
+# ═══════════════════════════════════════════════════════
+# API 请求/响应
+# ═══════════════════════════════════════════════════════
 
-class ReportContext(BaseModel):
-    """传递给 Jinja2 HTML 模板的完整上下文"""
-    scan_id: str
-    generated_at: str
-    total: int
-    results: list[SkillScanResult]
+class ScanRequest(BaseModel):
+    """扫描请求（文件通过 UploadFile 上传）"""
+    pass
 
-    # 统计聚合
-    risk_distribution: dict = Field(default_factory=dict)
-    dimension_averages: dict = Field(default_factory=dict)
-    red_flag_summary: dict = Field(default_factory=dict)
-    category_stats: list[dict] = Field(default_factory=list)
 
-    # 淘汰清单
-    rejected: list[SkillScanResult] = Field(default_factory=list)
-    conditional: list[SkillScanResult] = Field(default_factory=list)
-    passed: list[SkillScanResult] = Field(default_factory=list)
+class ScanError(BaseModel):
+    error: str
+    detail: str = ""
