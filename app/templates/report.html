@@ -1,0 +1,581 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>SkillScan 审核报告 — {{ ctx.scan_id }}</title>
+<style>
+/* ============================================================
+   SkillScan Report Styles — 统一 HTML 审核报告样式
+   Skill-Vetter 5 维度 5 分制审计
+   ============================================================ */
+:root {
+    --bg: #0f172a;
+    --card-bg: #1e293b;
+    --border: #334155;
+    --text: #e2e8f0;
+    --text-secondary: #94a3b8;
+    --text-muted: #64748b;
+    --accent: #3b82f6;
+    --accent-light: #60a5fa;
+    --green: #22c55e;
+    --yellow: #eab308;
+    --red: #ef4444;
+    --purple: #8b5cf6;
+    --orange: #f97316;
+    --radius: 8px;
+    --radius-lg: 12px;
+    --shadow: 0 1px 3px rgba(0,0,0,.3);
+}
+
+* { margin: 0; padding: 0; box-sizing: border-box; }
+
+body {
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "Noto Sans SC", Roboto, sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    line-height: 1.6;
+    min-height: 100vh;
+}
+
+.container { max-width: 1280px; margin: 0 auto; padding: 24px 32px; }
+
+/* ── Header ── */
+.report-header {
+    background: linear-gradient(135deg, #1e3a5f, #0f172a);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-lg);
+    padding: 32px 40px;
+    margin-bottom: 24px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 16px;
+}
+.report-header h1 { font-size: 26px; font-weight: 700; color: #fff; }
+.report-header .subtitle { color: var(--text-secondary); font-size: 14px; }
+.report-meta { text-align: right; }
+.report-meta .scan-id { font-family: "JetBrains Mono", monospace; font-size: 13px; color: var(--accent-light); }
+.report-meta .generated { font-size: 12px; color: var(--text-muted); }
+
+/* ── Stats Cards ── */
+.stats-grid {
+    display: grid;
+    grid-template-columns: repeat(5, 1fr);
+    gap: 16px;
+    margin-bottom: 24px;
+}
+.stat-card {
+    background: var(--card-bg);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 20px 24px;
+    text-align: center;
+}
+.stat-card .stat-value { font-size: 32px; font-weight: 700; }
+.stat-card .stat-label { font-size: 13px; color: var(--text-secondary); margin-top: 4px; }
+.stat-card.total .stat-value { color: var(--accent-light); }
+.stat-card.passed .stat-value { color: var(--green); }
+.stat-card.conditional .stat-value { color: var(--yellow); }
+.stat-card.rejected .stat-value { color: var(--red); }
+.stat-card.avg-score .stat-value { color: var(--purple); }
+
+@media (max-width: 900px) { .stats-grid { grid-template-columns: repeat(3, 1fr); } }
+@media (max-width: 600px) { .stats-grid { grid-template-columns: repeat(2, 1fr); } }
+
+/* ── Section ── */
+.section {
+    background: var(--card-bg);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-lg);
+    padding: 28px 32px;
+    margin-bottom: 20px;
+}
+.section h2 {
+    font-size: 18px;
+    font-weight: 600;
+    margin-bottom: 20px;
+    padding-bottom: 12px;
+    border-bottom: 1px solid var(--border);
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+.section h2 .emoji { font-size: 20px; }
+
+/* ── Risk Distribution Bar ── */
+.risk-bar-container {
+    display: flex;
+    height: 32px;
+    border-radius: var(--radius);
+    overflow: hidden;
+    margin-bottom: 12px;
+}
+.risk-bar-segment {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 12px;
+    font-weight: 600;
+    color: #fff;
+    min-width: 30px;
+}
+.risk-legend {
+    display: flex;
+    gap: 20px;
+    flex-wrap: wrap;
+    font-size: 13px;
+}
+.risk-legend span { display: flex; align-items: center; gap: 6px; }
+.risk-dot { width: 10px; height: 10px; border-radius: 50%; display: inline-block; }
+
+/* ── Dimension Scores ── */
+.dimension-grid {
+    display: grid;
+    grid-template-columns: repeat(5, 1fr);
+    gap: 14px;
+    margin-bottom: 20px;
+}
+.dim-card {
+    background: rgba(255,255,255,.03);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 18px 16px;
+    text-align: center;
+}
+.dim-card .dim-icon { font-size: 28px; margin-bottom: 8px; }
+.dim-card .dim-name { font-size: 13px; color: var(--text-secondary); font-weight: 600; }
+.dim-card .dim-score { font-size: 36px; font-weight: 800; margin: 8px 0; line-height: 1; }
+.dim-card .dim-max { font-size: 12px; color: var(--text-muted); }
+.dim-card .dim-bar-bg {
+    height: 6px;
+    background: var(--border);
+    border-radius: 3px;
+    margin-top: 8px;
+    overflow: hidden;
+}
+.dim-card .dim-bar-fill {
+    height: 100%;
+    border-radius: 3px;
+    transition: width .3s;
+}
+
+@media (max-width: 900px) { .dimension-grid { grid-template-columns: repeat(3, 1fr); } }
+@media (max-width: 500px) { .dimension-grid { grid-template-columns: repeat(2, 1fr); } }
+
+/* ── Tables ── */
+.table-wrap { overflow-x: auto; }
+table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 13px;
+}
+table th {
+    background: rgba(255,255,255,.05);
+    padding: 10px 12px;
+    text-align: left;
+    font-weight: 600;
+    color: var(--text-secondary);
+    border-bottom: 2px solid var(--border);
+    white-space: nowrap;
+}
+table td {
+    padding: 10px 12px;
+    border-bottom: 1px solid var(--border);
+    vertical-align: middle;
+}
+table tr:hover td { background: rgba(255,255,255,.02); }
+table .slug-col { font-family: "JetBrains Mono", monospace; font-size: 12px; color: var(--accent-light); }
+table .name-col { font-weight: 500; }
+table .purpose-col { max-width: 200px; color: var(--text-secondary); font-size: 12px; }
+table .score-col { font-weight: 700; text-align: center; }
+
+/* ── Badges ── */
+.badge {
+    display: inline-block;
+    padding: 2px 8px;
+    border-radius: 10px;
+    font-size: 11px;
+    font-weight: 600;
+    white-space: nowrap;
+}
+.badge-low { background: rgba(34,197,94,.15); color: var(--green); }
+.badge-medium { background: rgba(234,179,8,.15); color: var(--yellow); }
+.badge-high { background: rgba(239,68,68,.15); color: var(--red); }
+.badge-extreme { background: rgba(139,92,246,.15); color: var(--purple); }
+.badge-pass { background: rgba(34,197,94,.1); color: var(--green); }
+.badge-conditional { background: rgba(234,179,8,.1); color: var(--yellow); }
+.badge-reject { background: rgba(239,68,68,.1); color: var(--red); }
+.badge-rule { font-family: "JetBrains Mono", monospace; background: rgba(139,92,246,.15); color: var(--purple); }
+.badge-stars { font-size: 10px; color: var(--yellow); }
+
+/* ── Red Flag Items ── */
+.flag-item {
+    background: rgba(239,68,68,.05);
+    border-left: 3px solid var(--red);
+    padding: 10px 14px;
+    margin-bottom: 8px;
+    border-radius: 0 var(--radius) var(--radius) 0;
+}
+.flag-item .flag-rule { font-weight: 600; font-size: 13px; }
+.flag-item .flag-file { font-size: 11px; color: var(--text-muted); font-family: "JetBrains Mono", monospace; }
+.flag-item .flag-content {
+    font-family: "JetBrains Mono", monospace;
+    font-size: 11px;
+    color: var(--text-secondary);
+    background: rgba(0,0,0,.3);
+    padding: 6px 8px;
+    border-radius: 4px;
+    margin-top: 6px;
+    overflow-x: auto;
+    white-space: pre-wrap;
+    word-break: break-all;
+}
+
+/* ── Footer ── */
+.report-footer {
+    text-align: center;
+    padding: 24px;
+    color: var(--text-muted);
+    font-size: 12px;
+    border-top: 1px solid var(--border);
+    margin-top: 24px;
+}
+
+/* ── Misc ── */
+.cat-chip {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    padding: 3px 10px;
+    border-radius: 12px;
+    font-size: 12px;
+    background: rgba(59,130,246,.1);
+    color: var(--accent-light);
+    margin: 2px;
+}
+.empty-state {
+    text-align: center;
+    padding: 32px;
+    color: var(--text-muted);
+    font-size: 14px;
+}
+.collapsible-toggle {
+    cursor: pointer;
+    user-select: none;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    color: var(--accent-light);
+    font-size: 13px;
+    padding: 4px 0;
+}
+.collapsible-toggle:hover { opacity: .8; }
+.collapsible-content { margin-top: 12px; }
+
+.print-only { display: none; }
+@media print {
+    .container { padding: 16px; }
+    .section { break-inside: avoid; }
+}
+</style>
+</head>
+<body>
+<div class="container">
+
+<!-- ═══════════ HEADER ═══════════ -->
+<header class="report-header">
+    <div>
+        <h1>🛡️ SkillScan 技能安全审核报告</h1>
+        <div class="subtitle">基于 Skill-Vetter 协议 · 静态分析 · 不执行技能代码</div>
+    </div>
+    <div class="report-meta">
+        <div class="scan-id">扫描批次: {{ ctx.scan_id }}</div>
+        <div class="generated">生成时间: {{ ctx.generated_at }}</div>
+    </div>
+</header>
+
+<!-- ═══════════ STATS ═══════════ -->
+<div class="stats-grid">
+    <div class="stat-card total">
+        <div class="stat-value">{{ ctx.total }}</div>
+        <div class="stat-label">📦 扫描总数</div>
+    </div>
+    <div class="stat-card passed">
+        <div class="stat-value">{{ ctx.passed|length }}</div>
+        <div class="stat-label">✅ 通过</div>
+    </div>
+    <div class="stat-card conditional">
+        <div class="stat-value">{{ ctx.conditional|length }}</div>
+        <div class="stat-label">⚠️ 有条件通过</div>
+    </div>
+    <div class="stat-card rejected">
+        <div class="stat-value">{{ ctx.rejected|length }}</div>
+        <div class="stat-label">🚫 淘汰</div>
+    </div>
+    <div class="stat-card avg-score">
+        <div class="stat-value">
+            {% set scores = ctx.results | map(attribute='total_score') | list %}
+            {% if scores %}{{ (scores | sum / scores | length) | round(1) }}{% else %}0.0{% endif %}
+        </div>
+        <div class="stat-label">⭐ 平均综合评分</div>
+    </div>
+</div>
+
+<!-- ═══════════ 五维度审计评分 ═══════════ -->
+<div class="section">
+    <h2><span class="emoji">📊</span> 五维度审计评分总览（5 分制）</h2>
+    <div class="dimension-grid">
+        {% set dim_order = ['source_trust', 'network_isolation', 'permission_minimality', 'code_security', 'offline_compat'] %}
+        {% for dim_key in dim_order %}
+        {% set display = dim_display.get(dim_key, dim_key) %}
+        {% set icon = dim_icons.get(dim_key, '') %}
+        {% set avg = ctx.dimension_averages.get(dim_key, 0) %}
+        {% set pct = (avg / 5 * 100) | round(0) %}
+        {% set color = '#22c55e' if avg >= 4 else ('#eab308' if avg >= 3 else ('#f97316' if avg >= 2 else '#ef4444')) %}
+        <div class="dim-card">
+            <div class="dim-icon">{{ icon }}</div>
+            <div class="dim-name">{{ display }}</div>
+            <div class="dim-score" style="color:{{ color }}">{{ avg }}</div>
+            <div class="dim-max">/ 5 分</div>
+            <div class="dim-bar-bg">
+                <div class="dim-bar-fill" style="width:{{ pct }}%;background:{{ color }}"></div>
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+
+    <!-- 维度说明 -->
+    <div style="margin-top:20px;padding:16px;background:rgba(255,255,255,.02);border-radius:8px;font-size:12px;color:var(--text-muted)">
+        <strong>评分标准:</strong>
+        🔐 来源可信度 — 结合作者信誉、星标、分类匹配评估 | 
+        🌐 网络隔离度 — 代码中网络请求范围评估 |
+        🔑 权限最小化 — 文件操作/命令执行权限范围 |
+        🛡️ 代码安全性 — 15 条红牌规则命中情况 |
+        📡 离线兼容性 — 内网离线环境可运行程度
+    </div>
+</div>
+
+<!-- ═══════════ 风险分布 ═══════════ -->
+<div class="section">
+    <h2><span class="emoji">🎯</span> 风险等级分布</h2>
+    <div class="risk-bar-container">
+        {% set total = ctx.total or 1 %}
+        {% for level, color, label in [('LOW', '#22c55e', '🟢 低风险'), ('MEDIUM', '#eab308', '🟡 中风险'), ('HIGH', '#ef4444', '🔴 高风险'), ('EXTREME', '#7c3aed', '⛔ 极高风险')] %}
+        {% set count = ctx.risk_distribution.get(level, 0) %}
+        {% if count > 0 %}
+        <div class="risk-bar-segment" style="flex:{{ count }};background:{{ color }}" title="{{ label }}: {{ count }} 个">{{ (count / total * 100) | round(0) }}%</div>
+        {% endif %}
+        {% endfor %}
+    </div>
+    <div class="risk-legend">
+        {% for level, color, label in [('LOW', '#22c55e', '🟢 低风险'), ('MEDIUM', '#eab308', '🟡 中风险'), ('HIGH', '#ef4444', '🔴 高风险'), ('EXTREME', '#7c3aed', '⛔ 极高风险')] %}
+        <span><span class="risk-dot" style="background:{{ color }}"></span> {{ label }}: {{ ctx.risk_distribution.get(level, 0) }} 个</span>
+        {% endfor %}
+    </div>
+</div>
+
+<!-- ═══════════ 分类统计 ═══════════ -->
+<div class="section">
+    <h2><span class="emoji">📂</span> 分类统计</h2>
+    <div class="table-wrap">
+        <table>
+            <thead><tr>
+                <th>分类</th><th>总数</th><th>✅ 通过</th><th>⚠️ 有条件</th><th>🚫 淘汰</th><th>通过率</th>
+            </tr></thead>
+            <tbody>
+                {% for cat in ctx.category_stats %}
+                <tr>
+                    <td><span class="cat-chip">{{ cat.category }}</span></td>
+                    <td>{{ cat.total }}</td>
+                    <td style="color:var(--green)">{{ cat.passed }}</td>
+                    <td style="color:var(--yellow)">{{ cat.conditional }}</td>
+                    <td style="color:var(--red)">{{ cat.rejected }}</td>
+                    <td>{% if cat.total > 0 %}{{ (cat.passed / cat.total * 100) | round(0) }}%{% else %}—{% endif %}</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+
+<!-- ═══════════ 通过技能清单 ═══════════ -->
+{% set by_category = {} %}
+{% for r in ctx.passed + ctx.conditional %}
+    {% set cat = r.category or '其他' %}
+    {% set _ = by_category.setdefault(cat, []).append(r) %}
+{% endfor %}
+
+{% for cat, skills in by_category.items() | sort %}
+<div class="section">
+    <h2><span class="emoji">📋</span> {{ cat }} ({{ skills|length }} 个)</h2>
+    <div class="table-wrap">
+        <table>
+            <thead><tr>
+                <th>#</th><th>Slug</th><th>名称</th><th>用途</th>
+                <th>来源</th><th>网络</th><th>权限</th><th>安全</th><th>离线</th>
+                <th>风险</th><th>结论</th>
+            </tr></thead>
+            <tbody>
+                {% for s in skills | sort(attribute='total_score', reverse=True) %}
+                <tr>
+                    <td>{{ loop.index }}</td>
+                    <td class="slug-col">{{ s.slug }}</td>
+                    <td class="name-col">{{ s.name or s.slug }}</td>
+                    <td class="purpose-col">{{ s.description_zh or '—' }}</td>
+                    {% for ds in s.dimension_scores %}
+                    <td class="score-col" style="color:{{ '#22c55e' if ds.score >= 4 else ('#eab308' if ds.score >= 3 else '#f97316') }}">{{ ds.score }}</td>
+                    {% endfor %}
+                    <td>
+                        {% if s.risk_level.value == 'LOW' %}<span class="badge badge-low">🟢 低</span>
+                        {% elif s.risk_level.value == 'MEDIUM' %}<span class="badge badge-medium">🟡 中</span>
+                        {% elif s.risk_level.value == 'HIGH' %}<span class="badge badge-high">🔴 高</span>
+                        {% else %}<span class="badge badge-extreme">⛔ 极高</span>{% endif %}
+                    </td>
+                    <td>
+                        {% if s.verdict.value == '通过' %}<span class="badge badge-pass">✅ 通过</span>
+                        {% elif s.verdict.value == '有条件通过' %}<span class="badge badge-conditional">⚠️ 有条件</span>
+                        {% else %}<span class="badge badge-reject">🚫 淘汰</span>{% endif %}
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+{% endfor %}
+
+<!-- ═══════════ 淘汰技能清单 ═══════════ -->
+{% if ctx.rejected %}
+<div class="section">
+    <h2><span class="emoji">🚫</span> 淘汰技能清单 ({{ ctx.rejected|length }} 个)</h2>
+    <div style="margin-bottom:12px;font-size:13px;color:var(--text-muted)">
+        以下技能命中 Skill-Vetter 红牌规则或综合评分过低，不建议导入内网环境。
+    </div>
+    <div class="table-wrap">
+        <table>
+            <thead><tr>
+                <th>#</th><th>Slug</th><th>名称</th><th>用途</th><th>评分</th><th>命中规则</th><th>淘汰原因</th>
+            </tr></thead>
+            <tbody>
+                {% for s in ctx.rejected %}
+                <tr>
+                    <td>{{ loop.index }}</td>
+                    <td class="slug-col">{{ s.slug }}</td>
+                    <td class="name-col">{{ s.name or s.slug }}</td>
+                    <td class="purpose-col">{{ s.description_zh or '—' }}</td>
+                    <td class="score-col">{{ s.total_score }}</td>
+                    <td>
+                        {% for hit in s.red_flag_hits %}
+                        <span class="badge badge-rule">{{ hit.rule_id }}</span>
+                        {% endfor %}
+                    </td>
+                    <td style="font-size:12px;color:var(--text-secondary)">{{ s.summary[:80] }}</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+{% endif %}
+
+<!-- ═══════════ 红牌命中详情 ═══════════ -->
+{% set all_hits = [] %}
+{% for r in ctx.results %}
+    {% for hit in r.red_flag_hits %}
+        {% set _ = all_hits.append((r.slug, r.name, hit)) %}
+    {% endfor %}
+{% endfor %}
+
+{% if all_hits %}
+<div class="section">
+    <h2><span class="emoji">🚨</span> 红牌规则命中详情 ({{ all_hits|length }} 条)</h2>
+    <div class="collapsible-toggle" data-target="red-flag-details" onclick="toggleCollapsible(this)">
+        <span class="toggle-icon">▼</span> 点击展开/收起详情
+    </div>
+    <div class="collapsible-content" id="red-flag-details">
+        {% for slug, name, hit in all_hits %}
+        <div class="flag-item">
+            <div class="flag-rule">
+                <span class="badge badge-rule">{{ hit.rule_id }}</span> {{ hit.rule_name }}
+                — <span style="color:var(--text-secondary)">{{ name or slug }}</span>
+            </div>
+            <div class="flag-file">📄 {{ hit.file_path }}</div>
+            <div class="flag-content">{{ hit.matched_content | e }}</div>
+        </div>
+        {% endfor %}
+    </div>
+</div>
+{% endif %}
+
+<!-- ═══════════ 维度维度详解 ═══════════ -->
+<div class="section">
+    <h2><span class="emoji">📖</span> 审核维度详解</h2>
+    <div class="table-wrap">
+        <table>
+            <thead><tr>
+                <th>维度</th><th>评分标准</th><th>1 分 — 不及格</th><th>3 分 — 可接受</th><th>5 分 — 优秀</th>
+            </tr></thead>
+            <tbody>
+                <tr>
+                    <td>🔐 来源可信度</td>
+                    <td>作者信誉、星标、分类匹配</td>
+                    <td style="color:var(--red)">未知来源，无星标</td>
+                    <td style="color:var(--yellow)">已知作者，中等星标</td>
+                    <td style="color:var(--green)">官方/已验证，高星标</td>
+                </tr>
+                <tr>
+                    <td>🌐 网络隔离度</td>
+                    <td>外部 API 调用、网络工具依赖</td>
+                    <td style="color:var(--red)">大量外部 API，含爬虫工具</td>
+                    <td style="color:var(--yellow)">有外部 URL，无网络工具</td>
+                    <td style="color:var(--green)">零网络请求，完全内网</td>
+                </tr>
+                <tr>
+                    <td>🔑 权限最小化</td>
+                    <td>文件操作、命令执行范围</td>
+                    <td style="color:var(--red)">危险命令，权限超范围</td>
+                    <td style="color:var(--yellow)">有命令执行，基本匹配功能</td>
+                    <td style="color:var(--green)">纯文档型，无代码执行</td>
+                </tr>
+                <tr>
+                    <td>🛡️ 代码安全性</td>
+                    <td>15 条红牌规则命中</td>
+                    <td style="color:var(--red)">命中红牌，含恶意代码</td>
+                    <td style="color:var(--yellow)">少量可疑模式，建议复查</td>
+                    <td style="color:var(--green)">代码完全干净</td>
+                </tr>
+                <tr>
+                    <td>📡 离线兼容性</td>
+                    <td>内网环境运行能力</td>
+                    <td style="color:var(--red)">完全依赖互联网</td>
+                    <td style="color:var(--yellow)">引用外部但非强依赖</td>
+                    <td style="color:var(--green)">完全离线兼容</td>
+                </tr>
+            </tbody>
+        </table>
+    </div>
+</div>
+
+<!-- ═══════════ FOOTER ═══════════ -->
+<footer class="report-footer">
+    <p>SkillScan v1.0 · 基于 Skill-Vetter 安全审查协议</p>
+    <p>纯静态分析 · 不执行任何技能代码 · 企业内网安全审计工具</p>
+    <p style="margin-top:8px">报告生成: {{ ctx.generated_at }} · 扫描批次: {{ ctx.scan_id }}</p>
+</footer>
+
+</div>
+
+<script>
+function toggleCollapsible(el) {
+    const target = document.getElementById(el.dataset.target);
+    if (target) {
+        const isHidden = target.style.display === 'none';
+        target.style.display = isHidden ? 'block' : 'none';
+        el.querySelector('.toggle-icon').textContent = isHidden ? '▼' : '▶';
+    }
+}
+</script>
+</body>
+</html>
