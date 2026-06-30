@@ -1,17 +1,17 @@
-# SkillScan
+# SkillScan TRACE
 
-> 🛡️ 企业内网技能上线前静态安全审核服务
+> 🛡️ 企业内网 AI 技能上线前静态安全审核服务
 
-基于 **Skill-Vetter 协议**，对技能 zip 包进行**纯静态分析**（不执行代码），输出统一 HTML 格式的 **5 分制多维度审核报告**。
+基于 **LLM + SkillHub TRACE 评测体系**，对技能 zip 包进行**纯静态分析**（不执行代码），输出 SkillHub 风格的 **TRACE 五维度审核报告**。
 
 ## 核心特性
 
-- **纯静态分析** — 绝不执行技能中的任何代码，仅做文本内容安全扫描
-- **15 条红牌规则** — 基于 Skill-Vetter Phase 3 安全审查协议
-- **5 维度 5 分制评分** — 来源可信度 · 网络隔离度 · 权限最小化 · 代码安全性 · 离线兼容性
-- **统一 HTML 报告** — 所有技能审核输出统一风格的 HTML 报告
+- **LLM 驱动分析** — 通过系统提示词让大模型作为资深安全审查官，阅读理解代码语义，而非正则盲扫
+- **TRACE 五维度评测** — 对齐 SkillHub 官方 TRACE 评测体系 (T/R/A/C/E)，每维度 4 个子指标，共 20 项，0-5 分制
+- **纯静态分析** — 绝不执行技能中的任何代码，仅提取文本文件发送给 LLM 进行分析
+- **SkillHub 风格报告** — 白底色 + 蓝色强调 + 卡片式布局的 HTML 审核报告
 - **独立后端服务** — FastAPI 技术栈，与其他后端完全解耦
-- **批量扫描** — 支持单技能/批量技能上传审核
+- **自动分类检测** — 关键词引擎将技能归入 7 个类别之一（无需 LLM）
 
 ## 技术栈
 
@@ -19,136 +19,182 @@
 |------|------|
 | 应用框架 | FastAPI 0.115 |
 | Web 服务器 | Uvicorn 0.34 |
+| LLM 客户端 | httpx (OpenAI 兼容 API) |
 | 报告渲染 | Jinja2 3.1 |
 | 数据校验 | Pydantic 2.10 |
 | 运行环境 | Python 3.12 |
 
 ## 快速启动
 
-### 方式一：Docker
+### 1. 设置 LLM API 环境变量
+
+```bash
+export LLM_API_URL="https://api.openai.com/v1/chat/completions"
+export LLM_API_KEY="sk-xxx"
+export LLM_MODEL="gpt-4o"
+export LLM_TIMEOUT="120"
+export LLM_MAX_TOKENS="8192"
+```
+
+支持任意 OpenAI 兼容 API（如 DeepSeek、通义千问、本地 vLLM 等），只需修改 `LLM_API_URL` 和 `LLM_MODEL`。
+
+### 2. 启动服务
+
+**方式一：Docker**
 
 ```bash
 docker build -t skillscan .
-docker run -p 8000:8000 skillscan
+docker run -p 8000:8000 -e LLM_API_KEY="sk-xxx" skillscan
 ```
 
-### 方式二：Python 直接运行
+**方式二：Python 直接运行**
 
 ```bash
 pip install -r requirements.txt
 uvicorn app.main:app --host 0.0.0.0 --port 8000
 ```
 
-启动后访问：
+### 3. 访问
+
 - API 文档: http://localhost:8000/docs
 - 健康检查: http://localhost:8000/health
-- 审核维度说明: http://localhost:8000/dimensions
 
 ## API 接口
 
-### POST /scan — 扫描单个技能
+### POST /scan — TRACE 审核单个技能
 
 ```bash
 curl -X POST "http://localhost:8000/scan?slug=my-skill&name=MySkill&category=dev-tools&stars=100" \
   -F "file=@my-skill.zip"
 ```
 
-返回完整的静态安全审查结果（JSON），包括：
-- `source_check`: 来源可信度分析
-- `red_flag_hits`: 红牌规则命中列表
-- `permission_scope`: 权限范围分析
-- `dimension_scores`: 五维度评分（1-5 分制）
-- `risk_level`: LOW / MEDIUM / HIGH / EXTREME
-- `verdict`: 通过 / 有条件通过 / 淘汰
+**返回结构化 JSON（与 HTML 报告模板字段一一对应）：**
 
-### POST /scan/batch — 批量扫描
+```json
+{
+  "slug": "my-skill",
+  "name": "MySkill",
+  "description_zh": "技能中文描述",
+  "stars": 100,
+  "author": "作者名",
+  "version": "1.0.0",
+  "downloads": 5000,
+  "updated_at": "2026-06-30",
 
-```bash
-curl -X POST "http://localhost:8000/scan/batch" \
-  -F "files=@skill1.zip" \
-  -F "files=@skill2.zip" \
-  -F "files=@skill3.zip"
+  "detected_category": "development",
+  "detected_category_display": "开发工具",
+  "detected_category_confidence": 0.85,
+  "classification": {
+    "category_scores": { "aiAgent": 0.0, "development": 2.8 },
+    "evidence": ["Slug 命中 development 关键词 (4 个)"]
+  },
+
+  "trace_scores": [
+    {
+      "dimension": "trust",
+      "letter": "T",
+      "display_name": "可信任度",
+      "score": 4.5,
+      "sub_indicators": [
+        { "key": "security", "name": "安全检测", "score": 5, "comment": "..." },
+        { "key": "minimal_permission", "name": "最小权限", "score": 5, "comment": "..." },
+        { "key": "sensitive_data", "name": "敏感信息保护", "score": 4, "comment": "..." },
+        { "key": "availability", "name": "国内可用性", "score": 4, "comment": "..." }
+      ],
+      "findings_summary": "该技能不涉及网络请求，遵循最小权限原则..."
+    }
+  ],
+
+  "overall_score": 4.2,
+  "security_level": "安全",
+  "security_findings": [
+    {
+      "severity": "info",
+      "category": "网络请求",
+      "description": "SKILL.md 引用外部文档 URL，属于文档引用",
+      "file_path": "SKILL.md",
+      "suggestion": "无安全风险"
+    }
+  ],
+  "security_labs": [
+    { "name": "科恩实验室", "result": "深度漏洞扫描完成", "status": "pass" },
+    { "name": "云鼎实验室", "result": "AI 模型安全评估完成", "status": "pass" }
+  ],
+
+  "verdict": "通过",
+  "verdict_reason": "综合 TRACE 评分较高，未发现安全风险",
+
+  "files_scanned": 12,
+  "total_lines": 450,
+  "scan_duration_ms": 3200
+}
 ```
 
-返回批量结果 + HTML 报告链接。
+## TRACE 评测体系
 
-### GET /report/{scan_id} — 查看 HTML 报告
+TRACE 是 SkillHub 首发的 AI Skill 质量评测标准，从五个维度评估：
 
-```bash
-curl "http://localhost:8000/report/20260630_120000_abc12345"
-```
+| 字母 | 维度 | 子指标 | 颜色 |
+|------|------|--------|------|
+| **T** | Trust（可信任度） | 安全检测 · 最小权限 · 敏感信息保护 · 国内可用性 | 🔵 蓝色 |
+| **R** | Reliability（可靠性） | 稳定运行 · 一致结果 · 边界输入处理 · 异常反馈机制 | 🟢 绿色 |
+| **A** | Adaptability（适用性） | 场景匹配度 · 触发条件清晰度 · 能力边界界定 · 输入输出规范性 | 🟡 橙色 |
+| **C** | Convention（规范性） | 渐进式披露 · 文档结构清晰度 · 限制说明完整性 · 示例充分性 | 🟣 紫色 |
+| **E** | Effectiveness（有效性） | 结果正确性 · 输出完整性 · 可直接使用性 · 减少返工率 | 🔴 红色 |
 
-### GET /dimensions — 审核维度说明
+每个维度 4 个子指标，每项 0-5 分。维度得分 = 4 个子指标平均。综合得分 = 5 个维度平均。
 
-返回五维度评分体系的详细说明和评分标准。
+### 评分标准
 
-## 五维度评分体系
-
-| 维度 | 图标 | 衡量标准 |
-|------|------|---------|
-| 来源可信度 | 🔐 | 作者信誉、星标数量、分类匹配度 |
-| 网络隔离度 | 🌐 | 外部 API 调用、网络工具依赖 |
-| 权限最小化 | 🔑 | 文件操作范围、命令执行、危险命令检测 |
-| 代码安全性 | 🛡️ | 15 条红牌规则命中、可疑代码模式 |
-| 离线兼容性 | 📡 | 内网离线环境可运行程度 |
-
-每个维度采用 **5 分制**评分：
-- **5 分** = 优秀，完全符合内网安全要求
-- **4 分** = 良好，基本安全
-- **3 分** = 可接受，建议复查
-- **2 分** = 存在问题，需人工审批
-- **1 分** = 不及格，存在严重风险
-
-## 风险等级
-
-| 等级 | 颜色 | 判定条件 | 处理方式 |
-|------|------|---------|---------|
-| 🟢 LOW | 绿色 | 无红牌，高评分 | 直接通过，正常安装 |
-| 🟡 MEDIUM | 黄色 | 无红牌，网络/离线略有风险 | 通过但标记，定期复查 |
-| 🔴 HIGH | 红色 | 无红牌但安全/权限低分 | 需人工审批 |
-| ⛔ EXTREME | 紫色 | 命中红牌规则 | 立即淘汰，不可安装 |
-
-## 15 条红牌规则 (R1-R15)
-
-| 编号 | 规则 | 类别 |
+| 分数 | 等级 | 含义 |
 |------|------|------|
-| R1 | curl/wget 外部请求 | 网络请求 |
-| R2 | HTTP 数据提交 | 网络请求 |
-| R3 | 硬编码凭据/Token | 凭据安全 |
-| R4 | 读取敏感目录 | 文件系统 |
-| R5 | 访问隐私文件 | 文件系统 |
-| R6 | base64 解码 | 代码执行 |
-| R7 | eval/exec 执行 | 代码执行 |
-| R8 | 修改系统文件 | 文件系统 |
-| R9 | 动态命令执行 | 代码执行 |
-| R10 | IP 直连请求 | 网络请求 |
-| R11 | 代码混淆 | 代码执行 |
-| R12 | 提权请求 | 系统安全 |
-| R13 | 浏览器数据窃取 | 系统安全 |
-| R14 | 凭证文件触碰 | 凭据安全 |
-| R15 | 二进制可执行文件 | 二进制文件 |
+| 4.5 - 5.0 | ⭐ 优秀 | 可直接上线 |
+| 3.5 - 4.4 | ⭐ 良好 | 建议上线，关注低分维度 |
+| 2.5 - 3.4 | ⭐ 一般 | 需改进后上线 |
+| 0.0 - 2.4 | ⭐ 需改进 | 不建议上线 |
+
+### 分类体系（7 类）
+
+| 分类键 | 中文名 | 涵盖领域 |
+|--------|--------|---------|
+| `aiAgent` | AI 智能 | AI Agent、记忆系统、自主决策、推理优化 |
+| `itOpsSecurity` | IT 运维/安全 | 基础设施、安全审计、漏洞扫描、日志监控 |
+| `development` | 开发工具 | 编程助手、代码审查、CI/CD、测试 |
+| `dataAnalysis` | 数据分析 | 数据处理、可视化、机器学习、BI 报表 |
+| `contentCreation` | 内容创作 | 文档写作、PPT、设计、视频/图片生成 |
+| `officeEfficiency` | 办公效率 | 任务管理、自动化流程、日程安排 |
+| `others` | 其他 | 无法归入以上分类的技能 |
+
+## HTML 报告预览
+
+审核完成后可调用 `render_html_report(result)` 生成 SkillHub 风格报告：
+
+- 📦 技能头部卡片（名称/作者/版本/下载量/星级评分）
+- 📊 TRACE 五维度卡片总览（彩色字母 + 得分进度条）
+- 📋 维度详解（每维 4 个子指标的评分柱 + LLM 分析摘要）
+- 🔒 安全审查（三线审核标记 + 安全发现列表）
+- 🏁 审查结论（通过/有条件通过/淘汰 + 汇总表）
 
 ## 项目结构
 
 ```
 skillscan/
 ├── app/
-│   ├── main.py                # FastAPI 入口
-│   ├── report_renderer.py     # HTML 报告渲染器
+│   ├── main.py                 # FastAPI 入口
+│   ├── report_renderer.py      # HTML 报告渲染器
 │   ├── routers/
-│   │   └── scan.py            # API 路由
+│   │   └── scan.py             # API 路由 (/scan + /health)
 │   ├── engine/
-│   │   ├── scanner.py         # 主扫描编排器
-│   │   ├── red_flags.py       # 15 条红牌规则
-│   │   ├── source_check.py    # 来源可信度检查
-│   │   └── permission.py      # 权限范围分析
+│   │   ├── scanner.py          # 主编排器 (zip读取 → 分类 → LLM分析 → 组装)
+│   │   ├── llm_client.py       # OpenAI 兼容 LLM 客户端
+│   │   ├── prompts.py          # TRACE 系统提示词 + 审核消息构建
+│   │   └── classifier.py       # 关键词分类检测引擎 (7类, 无需LLM)
 │   ├── models/
-│   │   └── schemas.py         # Pydantic 数据模型
+│   │   └── schemas.py          # TRACE 数据模型 (20子指标 + 5维 + 安全审查)
 │   ├── templates/
-│   │   └── report.html        # Jinja2 报告模板
-│   ├── utils/
-│   │   └── zip_reader.py      # 安全 zip 读取器
-│   └── static/                # 静态文件
+│   │   └── report.html         # SkillHub 风格 Jinja2 报告模板
+│   └── utils/
+│       └── zip_reader.py       # 安全 zip 读取器 (仅提取文本)
 ├── requirements.txt
 ├── Dockerfile
 └── README.md
@@ -160,9 +206,9 @@ skillscan/
 
 本模块严格执行以下安全原则：
 1. **纯静态分析** — 不执行、不 eval、不 import 任何技能代码
-2. **最小权限** — 仅读取 zip 内的文本文件内容进行模式匹配
-3. **白名单模式** — 默认拒绝，仅放行已知安全模式
-4. **深度防御** — 三层审查：来源检查 → 红牌规则 → 权限分析
+2. **LLM 阅读理解** — 大模型仅作为资深审查官"阅读"代码文本，不做代码执行
+3. **最小权限** — 仅读取 zip 内的文本文件内容发送给 LLM
+4. **零数据外泄风险** — 所有内容仅在本地内存处理，LLM 调用可直连内网私有部署模型
 
 ## License
 
