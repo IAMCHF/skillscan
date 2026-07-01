@@ -2,7 +2,8 @@
 主扫描编排器 — LLM + TRACE 评测体系
 
 流程:
-1. 安全读取 zip
+0. SKILL.md 格式检测与自动修复（无需 LLM）
+1. 安全读取 zip（修复后的）
 2. 关键词分类检测（无需 LLM）
 3. 构建 LLM 审查提示词
 4. 调用 LLM 执行 TRACE 五维度分析
@@ -18,13 +19,14 @@ from typing import Optional
 
 from app.models.schemas import (
     SkillScanResult, DimensionScore, SubIndicatorScore,
-    SecurityFinding, ClassificationResult, SkillCategory,
+    SecurityFinding, ClassificationResult, SkillCategory, FixReportModel,
     TRACE_DISPLAY, TRACE_LETTER, TRACE_COLORS,
     CATEGORY_DISPLAY_MAP,
 )
 from app.engine.llm_client import get_client, LLMResponse
 from app.engine.prompts import SYSTEM_PROMPT_TRACE, build_audit_message
 from app.engine.classifier import classify_skill
+from app.engine.skill_fixer import fix_skill_zip
 from app.utils.zip_reader import safe_read_zip
 
 logger = logging.getLogger("skillscan.scanner")
@@ -47,14 +49,25 @@ async def scan_single_skill(
     t_start = time.perf_counter()
     meta = metadata or {}
 
-    # ── Step 1: 安全读取 zip ──
-    zip_result = safe_read_zip(zip_path, slug=meta.get("slug", ""))
+    # ── Step 0: SKILL.md 格式检测与自动修复（无需 LLM） ──
+    fixer_report = fix_skill_zip(zip_path)
+    actual_zip_path = fixer_report.fixed_path or zip_path
+    fix_model = FixReportModel(
+        zip_fixed=fixer_report.zip_fixed,
+        actions=fixer_report.actions,
+        errors=fixer_report.errors,
+        extracted_name=fixer_report.extracted_name,
+        extracted_desc=fixer_report.extracted_desc,
+    )
+
+    # ── Step 1: 安全读取 zip（使用修复后的 zip） ──
+    zip_result = safe_read_zip(actual_zip_path, slug=meta.get("slug", ""))
     if zip_result.error:
-        return _error_result(zip_result.slug, meta, zip_result.error, time.perf_counter() - t_start)
+        return _error_result(zip_result.slug, meta, zip_result.error, time.perf_counter() - t_start, fix_model)
 
     slug = zip_result.slug or meta.get("slug", "")
-    name = meta.get("name", "") or meta.get("title", "")
-    desc = meta.get("description_zh", "") or meta.get("description", "")
+    name = meta.get("name", "") or meta.get("title", "") or fix_model.extracted_name
+    desc = meta.get("description_zh", "") or meta.get("description", "") or fix_model.extracted_desc
 
     # ── Step 2: 分类检测（关键词规则，无需 LLM） ──
     file_extensions = [os.path.splitext(e.path)[1] for e in zip_result.files if os.path.splitext(e.path)[1]]
@@ -126,6 +139,7 @@ async def scan_single_skill(
         security_labs=_default_security_labs(),
         verdict=verdict,
         verdict_reason=verdict_reason,
+        fix_report=fix_model,
         files_scanned=zip_result.total_text_files,
         total_lines=total_lines,
         scan_duration_ms=int((t_end - t_start) * 1000),
@@ -212,11 +226,12 @@ def _parse_llm_result(resp: LLMResponse):
     return trace_scores, overall, security_findings, security_level, verdict, verdict_reason
 
 
-def _error_result(slug: str, meta: dict, error: str, elapsed: float) -> SkillScanResult:
+def _error_result(slug: str, meta: dict, error: str, elapsed: float, fix_model: FixReportModel | None = None) -> SkillScanResult:
     return SkillScanResult(
         slug=slug, name=meta.get("name", slug),
         security_level="不安全", verdict="淘汰",
         verdict_reason=f"无法读取 zip 包: {error}",
+        fix_report=fix_model or FixReportModel(),
         scan_duration_ms=int(elapsed * 1000),
     )
 
