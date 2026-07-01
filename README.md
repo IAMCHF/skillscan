@@ -9,8 +9,9 @@
 - **LLM 驱动分析** — 通过系统提示词让大模型作为资深安全审查官，阅读理解代码语义，而非正则盲扫
 - **TRACE 五维度评测** — 对齐 SkillHub 官方 TRACE 评测体系 (T/R/A/C/E)，每维度 4 个子指标，共 20 项，0-5 分制
 - **纯静态分析** — 绝不执行技能中的任何代码，仅提取文本文件发送给 LLM 进行分析
-- **SkillHub 风格报告** — 白底色 + 蓝色强调 + 卡片式布局的 HTML 审核报告
+- **SkillHub 风格报告** — 白底卡片 + Tab 栏 + 彩色 TRACE 卡片 + 子指标评分条的 HTML 审核报告
 - **独立后端服务** — FastAPI 技术栈，与其他后端完全解耦
+- **格式自动修复** — 检测 SKILL.md 文件名大小写、YAML frontmatter 闭合、缺失字段并自动修正（无需 LLM）
 - **自动分类检测** — 关键词引擎将技能归入 7 个类别之一（无需 LLM）
 
 ## 技术栈
@@ -29,6 +30,7 @@
 ### 1. 设置 LLM API 环境变量
 
 ```bash
+# 主审查模型（质量优先）
 export LLM_API_URL="https://api.openai.com/v1/chat/completions"
 export LLM_API_KEY="sk-xxx"
 export LLM_MODEL="gpt-4o"
@@ -96,10 +98,10 @@ curl -X POST "http://localhost:8000/scan?slug=my-skill&name=MySkill&category=dev
       "display_name": "可信任度",
       "score": 4.5,
       "sub_indicators": [
-        { "key": "security", "name": "安全检测", "score": 5, "comment": "..." },
-        { "key": "minimal_permission", "name": "最小权限", "score": 5, "comment": "..." },
-        { "key": "sensitive_data", "name": "敏感信息保护", "score": 4, "comment": "..." },
-        { "key": "availability", "name": "国内可用性", "score": 4, "comment": "..." }
+        { "key": "security", "name": "安全检测", "score": 5, "comment": "纯文档驱动，无外部依赖" },
+        { "key": "minimal_permission", "name": "最小权限", "score": 5, "comment": "仅读取 SKILL.md" },
+        { "key": "sensitive_data", "name": "敏感信息保护", "score": 4, "comment": "未发现硬编码凭据" },
+        { "key": "availability", "name": "国内可用性", "score": 4, "comment": "引用 GitHub，但非强依赖" }
       ],
       "findings_summary": "该技能不涉及网络请求，遵循最小权限原则..."
     }
@@ -124,10 +126,34 @@ curl -X POST "http://localhost:8000/scan?slug=my-skill&name=MySkill&category=dev
   "verdict": "通过",
   "verdict_reason": "综合 TRACE 评分较高，未发现安全风险",
 
+  "fix_report": {
+    "zip_fixed": true,
+    "actions": ["文件名修正: skill.md → SKILL.md", "YAML frontmatter 缺少结尾 ---，已自动插入"],
+    "errors": [],
+    "extracted_name": "MySkill",
+    "extracted_desc": "技能描述..."
+  },
+
   "files_scanned": 12,
   "total_lines": 450,
   "scan_duration_ms": 3200
 }
+```
+
+## 扫描流水线
+
+```
+zip 上传
+├── Step 0: 🔧 SKILL.md 格式检测与自动修复（无需 LLM）
+│           - 文件名大小写修正: skill.md → SKILL.md
+│           - YAML frontmatter 闭合修复: 缺少 --- 自动补全
+│           - 缺失字段补全: name/description 从上下文推断
+├── Step 1: 📦 安全读取 zip（仅提取文本，跳过二进制/超大文件）
+├── Step 2: 🏷️ 关键词分类检测（Slug+描述+全文+扩展名，无需 LLM）
+├── Step 3: ✍️ 构建 LLM 审查提示词
+├── Step 4: 🧠 LLM 执行 TRACE 五维度语义分析
+├── Step 5: 📋 解析 LLM 结构化 JSON 输出
+└── Step 6: 📊 组装完整 SkillScanResult
 ```
 
 ## TRACE 评测体系
@@ -165,15 +191,35 @@ TRACE 是 SkillHub 首发的 AI Skill 质量评测标准，从五个维度评估
 | `officeEfficiency` | 办公效率 | 任务管理、自动化流程、日程安排 |
 | `others` | 其他 | 无法归入以上分类的技能 |
 
-## HTML 报告预览
+## 格式修复详解
 
-审核完成后可调用 `render_html_report(result)` 生成 SkillHub 风格报告：
+SKILL.md 格式问题是企业内网平台上线的常见阻碍。SkillScan 在 TRACE 评测前自动执行以下检测与修复：
+
+| 检测项 | 问题示例 | 自动修复 |
+|--------|---------|---------|
+| 文件名大小写 | 根目录 `skill.md` / `Skill.md` | → `SKILL.md` |
+| YAML 缺少闭合 | 只有开头 `---`，缺少结尾 `---` | 自动推断结尾位置插入 `---` |
+| 缺少 name 字段 | frontmatter 无 name | 从 `# 标题` 或 slug 推断 |
+| 缺少 description | frontmatter 无 description | 从正文首段提取（≤200 字） |
+| 保留 version | 原本有 `version: 1.0` | 保留不动 |
+| 不添加 version | 原本无 version | 不添加 |
+
+修复结果通过 `fix_report` 字段返回，包含修复动作列表和错误信息。修复后的 zip 用于后续评测，原始文件不被修改。
+
+## HTML 报告预览
 
 - 📦 技能头部卡片（名称/作者/版本/下载量/星级评分）
 - 📊 TRACE 五维度卡片总览（彩色字母 + 得分进度条）
 - 📋 维度详解（每维 4 个子指标的评分柱 + LLM 分析摘要）
 - 🔒 安全审查（三线审核标记 + 安全发现列表）
 - 🏁 审查结论（通过/有条件通过/淘汰 + 汇总表）
+- 🔧 格式检测修复记录
+
+打开 [sample-report.html](sample-report.html) 查看含假数据的完整效果。
+
+## 前端对接
+
+详见 [FIELD-MAPPING.md](FIELD-MAPPING.md)，包含完整的 JSON 字段 → HTML 报告映射表，以及 React / Vue 渲染示例。
 
 ## 项目结构
 
@@ -185,16 +231,19 @@ skillscan/
 │   ├── routers/
 │   │   └── scan.py             # API 路由 (/scan + /health)
 │   ├── engine/
-│   │   ├── scanner.py          # 主编排器 (zip读取 → 分类 → LLM分析 → 组装)
+│   │   ├── scanner.py          # 主编排器 (修复→读取→分类→LLM审核→组装)
+│   │   ├── skill_fixer.py      # SKILL.md 格式检测与自动修复 (无需LLM)
+│   │   ├── classifier.py       # 关键词分类检测引擎 (无需LLM)
 │   │   ├── llm_client.py       # OpenAI 兼容 LLM 客户端
-│   │   ├── prompts.py          # TRACE 系统提示词 + 审核消息构建
-│   │   └── classifier.py       # 关键词分类检测引擎 (7类, 无需LLM)
+│   │   └── prompts.py          # TRACE 系统提示词 + 审核消息构建
 │   ├── models/
-│   │   └── schemas.py          # TRACE 数据模型 (20子指标 + 5维 + 安全审查)
+│   │   └── schemas.py          # 数据模型 (FixReport + TRACE 五维20子指标)
 │   ├── templates/
 │   │   └── report.html         # SkillHub 风格 Jinja2 报告模板
 │   └── utils/
 │       └── zip_reader.py       # 安全 zip 读取器 (仅提取文本)
+├── sample-report.html          # 假数据预览报告
+├── FIELD-MAPPING.md            # 前端对接指南
 ├── requirements.txt
 ├── Dockerfile
 └── README.md
