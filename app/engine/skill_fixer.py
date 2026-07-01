@@ -46,6 +46,16 @@ def fix_skill_zip(original_path: str) -> FixReport:
     try:
         with zipfile.ZipFile(original_path, "r") as zf:
             entries = list(zf.infolist())
+            # ── 1. 查找根目录 SKILL.md ──
+            skill_entry = _find_skill_md(entries)
+            if skill_entry is None:
+                report.errors.append("zip 根目录未找到 SKILL.md 文件")
+                report.fixed_path = original_path
+                return report
+
+            # 在 with 块内读取内容（否则 zip 会关闭）
+            raw_content = zf.read(skill_entry).decode("utf-8", errors="ignore")
+            original_filename = skill_entry.filename
     except zipfile.BadZipFile:
         report.errors.append("无效的 zip 文件，无法进行格式修复")
         report.fixed_path = original_path
@@ -54,16 +64,6 @@ def fix_skill_zip(original_path: str) -> FixReport:
         report.errors.append(f"读取 zip 失败: {e}")
         report.fixed_path = original_path
         return report
-
-    # ── 1. 查找根目录 SKILL.md ──
-    skill_entry = _find_skill_md(entries)
-    if skill_entry is None:
-        report.errors.append("zip 根目录未找到 SKILL.md 文件")
-        report.fixed_path = original_path
-        return report
-
-    raw_content = zf.read(skill_entry).decode("utf-8", errors="ignore")
-    original_filename = skill_entry.filename
 
     content = raw_content
     need_rewrite = False
