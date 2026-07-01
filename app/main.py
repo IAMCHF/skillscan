@@ -1,6 +1,11 @@
 """
 FastAPI 应用入口 — SkillScan TRACE 审核服务
+
+在导入任何引擎模块前加载 .env 文件，确保配置优先就绪。
 """
+# 环境变量加载器 — 最先导入（导入时自动读取 .env.{dev|test|prod}）
+from app import env_loader  # noqa: F401
+
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from app.routers.scan import router as scan_router
