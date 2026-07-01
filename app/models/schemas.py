@@ -163,6 +163,19 @@ class ClassificationResult(BaseModel):
     evidence: list[str] = Field(default_factory=list)
 
 
+# ═══════════════════════════════════════════════════════
+# 格式修复报告（必须在 SkillScanResult 之前定义）
+# ═══════════════════════════════════════════════════════
+
+class FixReportModel(BaseModel):
+    """SKILL.md 格式检测与自动修复报告"""
+    zip_fixed: bool = False                     # 是否执行了修复
+    actions: list[str] = Field(default_factory=list)   # 修复动作描述
+    errors: list[str] = Field(default_factory=list)    # 修复错误
+    extracted_name: str = ""                    # 从修复中提取的 name
+    extracted_desc: str = ""                    # 从修复中提取的 description
+
+
 class SkillScanResult(BaseModel):
     """单个技能的完整 TRACE 审核结果 — 与 HTML 模板字段一一对应"""
     # ── 基础信息 ──
@@ -216,16 +229,3 @@ class ScanRequest(BaseModel):
 class ScanError(BaseModel):
     error: str
     detail: str = ""
-
-
-# ═══════════════════════════════════════════════════════
-# 格式修复报告
-# ═══════════════════════════════════════════════════════
-
-class FixReportModel(BaseModel):
-    """SKILL.md 格式检测与自动修复报告"""
-    zip_fixed: bool = False                     # 是否执行了修复
-    actions: list[str] = Field(default_factory=list)   # 修复动作描述
-    errors: list[str] = Field(default_factory=list)    # 修复错误
-    extracted_name: str = ""                    # 从修复中提取的 name
-    extracted_desc: str = ""                    # 从修复中提取的 description
