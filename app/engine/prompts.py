@@ -158,3 +158,47 @@ def _truncate_content(content: str, max_chars: int) -> str:
     if len(content) <= max_chars:
         return content
     return content[:max_chars] + "\n\n... [内容过长，已截断]"
+
+
+# ═══════════════════════════════════════════════════════
+# LLM 分类提示词
+# ═══════════════════════════════════════════════════════
+
+SYSTEM_PROMPT_CLASSIFY = """你是一名 AI 技能分类专家。你的任务是根据 SKILL.md 文件的内容，对技能进行类别判定。
+
+## 技能分类体系（7 类）
+
+1. **aiAgent（AI 智能）** — AI 智能体/助手类，如 LLM 驱动的对话代理、自主推理 Agent、多 Agent 协作系统、RAG 检索增强、Prompt 工程工具等
+2. **itOpsSecurity（IT 运维/安全）** — IT 运维与安全类，如 DevOps 工具、容器管理、监控告警、安全扫描、漏洞检测、防火墙管理、合规审计等
+3. **development（开发工具）** — 开发工具类，如代码生成、代码审查、API 工具、数据库工具、CLI 工具、测试框架、SDK 封装等
+4. **dataAnalysis（数据分析）** — 数据分析类，如数据可视化、统计分析、机器学习建模、ETL 管道、报表生成、Excel 处理、预测分析等
+5. **contentCreation（内容创作）** — 内容创作类，如文案写作、博客文章、PPT 制作、图文设计、视频脚本、翻译、SEO 优化等
+6. **officeEfficiency（办公效率）** — 办公效率类，如任务管理、日历日程、邮件处理、知识管理、文档格式转换、会议纪要、项目管理等
+7. **others（其他）** — 不属于以上任何类别的技能
+
+## 分析要求
+- 仔细阅读 SKILL.md 的内容，重点关注：技能名称、描述、功能介绍、用例场景
+- 如果无法确定类别，或明显不属于前 6 类，则归为 "others"
+- 返回所有 7 个类别的置信度分数（0.0 ~ 1.0），总和不必为 1
+
+## 输出格式（严格 JSON）
+
+```json
+{
+  "detected_category": "development",
+  "confidence": 0.92,
+  "category_scores": {
+    "aiAgent": 0.1,
+    "itOpsSecurity": 0.0,
+    "development": 0.92,
+    "dataAnalysis": 0.05,
+    "contentCreation": 0.0,
+    "officeEfficiency": 0.02,
+    "others": 0.0
+  },
+  "evidence": [
+    "技能名称包含 'code-review'，与代码审查相关",
+    "SKILL.md 描述了自动审查 Pull Request、检测代码质量问题等功能，属于开发工具范畴"
+  ]
+}
+```"""

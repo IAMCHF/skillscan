@@ -4,7 +4,7 @@
 流程:
 0. SKILL.md 格式检测（仅检测不修复，格式不对立即返回）
 1. 安全读取 zip
-2. 关键词分类检测（无需 LLM）
+2. LLM 分类检测（SKILL.md 语义分类，LLM 不可用时降级为关键词）
 3. 构建 LLM 审查提示词
 4. 调用 LLM 执行 TRACE 五维度分析
 5. 解析 LLM 结构化 JSON 输出
@@ -69,13 +69,12 @@ async def scan_single_skill(
     name = meta.get("name", "") or meta.get("title", "")
     desc = meta.get("description_zh", "") or meta.get("description", "")
 
-    # ── Step 2: 分类检测 ──
-    file_extensions = [os.path.splitext(e.path)[1] for e in zip_result.files if os.path.splitext(e.path)[1]]
-    classification = classify_skill(
-        slug=slug, name=name, description=desc,
+    # ── Step 2: 分类检测（LLM 驱动，SKILL.md 分类） ──
+    classification = await classify_skill(
         skill_md_content=zip_result.skill_md_content,
-        file_extensions=file_extensions,
+        slug=slug, name=name, description=desc,
         original_category=meta.get("category", ""),
+        file_extensions=list({os.path.splitext(e.path)[1] for e in zip_result.files if os.path.splitext(e.path)[1]}),
     )
 
     # ── Step 3: 构建 LLM 审查请求 ──
