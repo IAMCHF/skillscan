@@ -89,24 +89,22 @@ def analyze_skill_md(zip_path: str) -> FixReport:
     if raw_content is None:
         return report
 
-    actions: list[str] = []
-
     # 1. 文件名大小写
     if original_filename and os.path.basename(original_filename) != "SKILL.md":
-        actions.append(f"文件名修正: {original_filename} → SKILL.md")
+        report.actions.append(f"文件名修正: {original_filename} → SKILL.md")
 
-    # 2. YAML frontmatter 闭合
+    # 2. YAML frontmatter 闭合（按行精确匹配，防止匹配正文中的 ---）
     if raw_content.startswith(_YAML_DELIM):
-        parts = raw_content.split(_YAML_DELIM, 2)
-        if len(parts) < 3:
-            actions.append("YAML frontmatter 缺少结尾 ---")
+        lines = raw_content.split("\n")
+        has_closing = any(line.strip() == _YAML_DELIM for line in lines[1:])
+        if not has_closing:
+            report.actions.append("YAML frontmatter 缺少结尾 ---")
 
     # 3. name / description 字段
     _check_required_fields(raw_content, report)
 
-    if actions:
+    if report.actions:
         report.needs_fix = True
-        report.actions = actions
 
     return report
 
@@ -165,6 +163,30 @@ def fix_skill_content(zip_path: str) -> tuple[FixReport, str]:
 # Internal helpers
 # ═══════════════════════════════════════════════════════
 
+def _extract_frontmatter(content: str) -> tuple[Optional[str], Optional[str]]:
+    """按行精确解析 YAML frontmatter，返回 (yaml_block, body)。
+
+    与 _fix_yaml_frontmatter 的按行检测一致，防止正文中的 --- 干扰边界判断。
+    若无有效 frontmatter（无起始 --- 或缺少闭合 ---），返回 (None, None)。
+    """
+    lines = content.split("\n")
+    if not lines or lines[0].strip() != _YAML_DELIM:
+        return None, None
+
+    closing_idx = -1
+    for i in range(1, len(lines)):
+        if lines[i].strip() == _YAML_DELIM:
+            closing_idx = i
+            break
+
+    if closing_idx == -1:
+        return None, None  # 缺少闭合 ---
+
+    yaml_block = "\n".join(lines[1:closing_idx])
+    body = "\n".join(lines[closing_idx + 1:])
+    return yaml_block, body
+
+
 def _find_skill_md(entries: list[zipfile.ZipInfo]) -> Optional[zipfile.ZipInfo]:
     """在 zip 根目录中查找 SKILL.md（大小写不敏感）"""
     for entry in entries:
@@ -186,18 +208,13 @@ def _find_skill_md(entries: list[zipfile.ZipInfo]) -> Optional[zipfile.ZipInfo]:
 
 def _check_required_fields(content: str, report: FixReport) -> None:
     """检查必需的 YAML 字段是否存在，不修改"""
-    if not content.startswith(_YAML_DELIM):
+    yaml_block, body = _extract_frontmatter(content)
+    if yaml_block is None:
         report.extracted_name = ""
         report.extracted_desc = ""
         report.actions.append("缺少 YAML frontmatter 格式")
         return
 
-    parts = content.split(_YAML_DELIM, 2)
-    if len(parts) < 3:
-        return
-
-    yaml_block = parts[1]
-    body = parts[2]
     fields: dict[str, str] = {}
     for line in yaml_block.strip("\n").split("\n"):
         stripped = line.strip()
@@ -252,15 +269,10 @@ def _guess_frontmatter_end(lines: list[str]) -> Optional[int]:
 
 def _ensure_required_fields(content: str, report: FixReport) -> tuple[str, bool]:
     """确保 YAML frontmatter 包含 name 和 description"""
-    if not content.startswith(_YAML_DELIM):
+    yaml_block, body = _extract_frontmatter(content)
+    if yaml_block is None:
         return content, False
 
-    parts = content.split(_YAML_DELIM, 2)
-    if len(parts) < 3:
-        return content, False
-
-    yaml_block = parts[1]
-    body = parts[2]
     yaml_lines = yaml_block.strip("\n").split("\n")
 
     fields: dict[str, str] = {}
