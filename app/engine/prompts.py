@@ -139,16 +139,16 @@ def build_audit_message(
     skill_md_content: str,
     file_list: list[str],
     file_contents: list[tuple[str, str]],
-    max_content_chars: int = 24000,
+    max_content_chars: int = 200000,
 ) -> str:
     """
     构建发送给 LLM 的审查请求消息
     包含技能元数据、SKILL.md 全文和所有其他文本文件内容（截断适配 context window）
 
-    预算分配策略：
+    预算分配策略（适配 256k token 上下文窗口）：
     - 元数据 + 文件清单：~500 字符
-    - SKILL.md：最多 8000 字符
-    - 其他文件：剩余预算均分，每个文件最多 4000 字符
+    - SKILL.md：最多 30000 字符
+    - 其他文件：剩余预算均分，每个文件最多 20000 字符
     """
     parts = [
         f"## 技能元数据",
@@ -164,7 +164,7 @@ def build_audit_message(
         parts.append(f"- {fp}")
 
     # SKILL.md 全文
-    skill_md_quota = min(max_content_chars // 3, 8000)
+    skill_md_quota = min(max_content_chars // 6, 30000)
     if skill_md_content:
         skill_md_section = _truncate_content(skill_md_content, skill_md_quota)
         parts.append(f"\n## SKILL.md（核心文档）\n{skill_md_section}")
@@ -184,7 +184,7 @@ def build_audit_message(
 
     if other_files and remaining > 500:
         # 计算每个文件的基础配额，确保至少有一定内容
-        per_file_quota = max(min(remaining // len(other_files), 4000), 500)
+        per_file_quota = max(min(remaining // len(other_files), 20000), 500)
         parts.append(f"\n## 其他文件（共 {len(other_files)} 个文件，需逐一审查安全性）")
 
         overflow = False
