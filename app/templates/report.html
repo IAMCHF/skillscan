@@ -234,33 +234,6 @@ body {
 .meta-item { display: flex; align-items: center; gap: 4px }
 
 /* ── 标签页 ── */
-.tab-bar {
-  display: flex;
-  border-bottom: 2px solid var(--border);
-  background: #fafbfc;
-  border-radius: var(--radius-lg) var(--radius-lg) 0 0;
-}
-.tab-btn {
-  flex: 1;
-  padding: 14px 20px;
-  text-align: center;
-  font-size: 13px;
-  font-weight: 500;
-  color: var(--text-secondary);
-  background: transparent;
-  border: none;
-  cursor: pointer;
-  transition: 0.15s;
-  letter-spacing: 0.2px;
-}
-.tab-btn.active {
-  color: var(--accent);
-  font-weight: 600;
-  border-bottom: 3px solid var(--accent);
-  margin-bottom: -2px;
-  background: #fff;
-}
-.tab-btn:hover:not(.active) { color: var(--text-primary); background: #f0f1f4 }
 
 /* ── 章节标题 ── */
 .section-title {
@@ -600,18 +573,10 @@ body {
   </div>
 </div>
 
-<!-- ═══ 卡片 2：Tab + TRACE 评测报告 ═══ -->
-<div class="card" style="padding:0;overflow:hidden">
-  <div class="tab-bar">
-    <button class="tab-btn">概述</button>
-    <button class="tab-btn">版本历史</button>
-    <button class="tab-btn">版本对比</button>
-    <button class="tab-btn active">评测报告</button>
-  </div>
+<!-- ═══ 卡片 2：TRACE 评测报告 ═══ -->
+<div class="card">
 
-  <div style="padding:32px 40px">
-
-    <!-- 格式修复报告 -->
+  <!-- 格式修复报告 -->
     {% if result.fix_report and (result.fix_report.zip_fixed or result.fix_report.errors) %}
     <div class="section-title">格式检测与修复</div>
     {% if result.fix_report.errors %}
@@ -638,6 +603,7 @@ body {
     {% endif %}
     {% if not result.fix_report.zip_fixed and not result.fix_report.errors %}
     <div class="empty-state">SKILL.md 格式检查通过，无需修复</div>
+    {% endif %}
     {% endif %}
 
     <!-- TRACE 五维度总览 -->
@@ -723,7 +689,6 @@ body {
         <tr><td>代码总行数</td><td>{{ result.total_lines }} 行</td></tr>
         <tr><td>扫描耗时</td><td>{{ _fmt_duration(result.scan_duration_ms) }}</td></tr>
       </table>
-    </div>
   </div>
 </div>
 

@@ -71,6 +71,7 @@ def render_html_report(result: SkillScanResult) -> str:
         dim_data=dim_data,
         rating_text=rating_text,
         rating_cls=rating_cls,
+        stars=result.stars or 0,
         _fmt_num=_fmt_num,
         _fmt_duration=_fmt_duration,
     )
