@@ -2,6 +2,7 @@
 HTML 审核报告渲染器 — SkillHub 严格复刻风格
 """
 from __future__ import annotations
+import math
 import os
 from jinja2 import Template
 from app.models.schemas import SkillScanResult, TRACE_COLORS, TRACE_SUB_INDICATORS
@@ -22,6 +23,74 @@ def _fmt_duration(ms: int) -> str:
     if ms >= 1000:
         return f"{ms / 1000:.1f} s"
     return f"{ms} ms"
+
+
+def _compute_pentagon(dim_data: list[dict]) -> dict:
+    """计算 TRACE 五边形雷达图 SVG 坐标
+
+    五边形顶点顺序（从顶部顺时针）：
+    T(可信任度) → R(可靠性) → A(适用性) → C(规范性) → E(有效性)
+    """
+    cx, cy = 200, 215
+    max_r = 150
+    # 5 个顶点角度（从顶部顺时针，SVG 坐标系 y 向下）
+    angles_deg = [90, 162, 234, 306, 18]
+
+    def _point(angle_deg: float, radius: float) -> tuple[float, float]:
+        rad = math.radians(angle_deg)
+        x = cx + radius * math.cos(rad)
+        y = cy - radius * math.sin(rad)
+        return round(x, 1), round(y, 1)
+
+    # 5 层网格（评分 1-5）
+    grids = []
+    for level in range(1, 6):
+        r = max_r * level / 5
+        pts = " ".join(f"{_point(a, r)[0]},{_point(a, r)[1]}" for a in angles_deg)
+        grids.append({"level": level, "points": pts})
+
+    # 实际评分的多边形顶点
+    score_points = []
+    for i, dim in enumerate(dim_data):
+        score = max(0, min(5, dim["score"]))
+        r = max_r * score / 5 if score > 0 else 2
+        x, y = _point(angles_deg[i], r)
+        score_points.append(f"{x},{y}")
+
+    # 顶点标签（在最大五边形外侧）
+    label_offset = 26
+    vertices = []
+    for i, dim in enumerate(dim_data):
+        angle = angles_deg[i]
+        score = dim["score"]
+        x, y = _point(angle, max_r)
+        lx, ly = _point(angle, max_r + label_offset)
+        # 分数文字位置（稍微内缩）
+        sx, sy = _point(angle, max(score / 5 * max_r + 18, 22))
+        # 调整水平居中
+        if angle == 90:
+            lx, sx = cx, lx
+        elif angle == 18:
+            lx += 4
+            sx = lx
+        elif angle == 162:
+            lx -= 4
+            sx = lx
+        elif angle in (234, 306):
+            sx = lx
+        vertices.append({
+            "x": x, "y": y, "lx": lx, "ly": ly,
+            "sx": sx, "sy": sy,
+            "letter": dim["letter"], "name": dim["display"],
+            "score": f"{score:.1f}", "color": dim["color"],
+        })
+
+    return {
+        "grids": grids,
+        "score_points": " ".join(score_points),
+        "vertices": vertices,
+        "cx": cx, "cy": cy, "max_r": max_r,
+    }
 
 
 def render_html_report(result: SkillScanResult) -> str:
@@ -69,6 +138,7 @@ def render_html_report(result: SkillScanResult) -> str:
     return template.render(
         result=result,
         dim_data=dim_data,
+        pentagon=_compute_pentagon(dim_data),
         rating_text=rating_text,
         rating_cls=rating_cls,
         stars=result.stars or 0,
