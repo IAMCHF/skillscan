@@ -3,602 +3,928 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>TRACE 评测报告 — Excel Formula</title>
+<title>TRACE 评测报告 — AI 代码审查助手</title>
 <style>
-/* ══════════════════════════════════════════════════
-   SkillScan TRACE — SkillHub 严格复刻风格
-   ══════════════════════════════════════════════════ */
-*{margin:0;padding:0;box-sizing:border-box}
-body{
-  font-family:-apple-system,BlinkMacSystemFont,"Segoe UI","Noto Sans SC","PingFang SC","Microsoft YaHei",sans-serif;
-  background:#f5f6f7;color:#1e293b;line-height:1.7
+/* ═══════════════════════════════════════════════════════
+   企业级设计系统 — SkillScan TRACE Report
+   ═══════════════════════════════════════════════════════ */
+:root {
+  --bg:            #f4f5f7;
+  --card:          #ffffff;
+  --text-primary:  #172b4d;
+  --text-secondary:#5e6c84;
+  --text-muted:    #8993a4;
+  --accent:        #0052cc;
+  --accent-hover:  #0747a6;
+  --success:       #00875a;
+  --success-bg:    #e3fcef;
+  --warning:       #ff8b00;
+  --warning-bg:    #fffae6;
+  --danger:        #de350b;
+  --danger-bg:     #ffebe6;
+  --border:        #dfe1e6;
+  --border-light:  #ebecf0;
+  --radius:        4px;
+  --radius-lg:     8px;
+  --shadow-sm:     0 1px 3px rgba(9,30,66,0.08);
+  --shadow-card:   0 1px 1px rgba(9,30,66,0.08), 0 2px 8px rgba(9,30,66,0.06);
+  --font:          -apple-system,BlinkMacSystemFont,"Segoe UI","Noto Sans SC","PingFang SC","Microsoft YaHei",sans-serif;
+  --font-mono:     "SF Mono","JetBrains Mono","Fira Code",Consolas,monospace;
 }
-.container{max-width:860px;margin:0 auto;padding:32px 20px 64px}
+*{margin:0;padding:0;box-sizing:border-box}
+
+body {
+  font-family: var(--font);
+  background: var(--bg);
+  color: var(--text-primary);
+  line-height: 1.6;
+  -webkit-font-smoothing: antialiased;
+}
+
+.container {
+  max-width: 900px;
+  margin: 0 auto;
+  padding: 24px 24px 48px;
+}
 
 /* ── 卡片 ── */
-.card{
-  background:#fff;border-radius:16px;padding:32px 36px;margin-bottom:16px
+.card {
+  background: var(--card);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-card);
+  padding: 28px 36px;
+  margin-bottom: 12px;
+  border: 1px solid var(--border-light);
 }
 
-/* ── 顶部区域（严格复刻 SkillHub 技能详情页） ── */
-.skill-top{display:flex;align-items:flex-start;gap:20px}
-.skill-avatar{
-  width:72px;height:72px;border-radius:18px;
-  background:linear-gradient(135deg,#2563eb,#7c3aed);
-  display:flex;align-items:center;justify-content:center;
-  font-size:30px;color:#fff;flex-shrink:0;font-weight:700
+/* ── 页头 ── */
+.page-header {
+  padding: 0 0 20px;
+  border-bottom: 2px solid var(--border);
+  margin-bottom: 16px;
 }
-.skill-main{flex:1;min-width:0}
-.skill-main h1{font-size:24px;font-weight:700;color:#0f172a;line-height:1.3;margin-bottom:8px}
-.rating-row{display:flex;align-items:center;gap:12px;margin-bottom:10px}
-.rating-big-score{font-size:32px;font-weight:800;color:#0f172a}
-.rating-big-label{font-size:14px;color:#64748b}
-.rating-big-badge{
-  display:inline-flex;align-items:center;gap:4px;
-  padding:3px 12px;border-radius:20px;font-size:14px;font-weight:700;
-  background:#ecfdf5;color:#10b981;
-  border:1px solid #a7f3d0
+.page-header h1 {
+  font-size: 26px;
+  font-weight: 700;
+  color: var(--text-primary);
+  letter-spacing: -0.3px;
 }
-.secure-badge{
-  display:inline-flex;align-items:center;gap:4px;
-  padding:4px 14px;border-radius:20px;font-size:13px;font-weight:600;
-  background:#ecfdf5;color:#10b981;
-  border:1px solid #a7f3d0
-}
-.secure-badge-risk{
-  background:#fffbeb;color:#d97706;border-color:#fde68a
-}
-.source-label{
-  display:inline-flex;align-items:center;gap:4px;
-  padding:4px 12px;border-radius:20px;
-  font-size:12px;color:#64748b;background:#f1f5f9
+.page-header .subtitle {
+  font-size: 12px;
+  color: var(--text-muted);
+  margin-top: 4px;
+  font-weight: 400;
+  letter-spacing: 0.5px;
+  text-transform: uppercase;
 }
 
-/* ── 描述 ── */
-.skill-desc{
-  margin-top:14px;font-size:14px;color:#475569;line-height:1.8
+/* ── 技能头部 ── */
+.skill-top {
+  display: flex;
+  align-items: flex-start;
+  gap: 18px;
+}
+.skill-avatar {
+  width: 52px; height: 52px;
+  border-radius: var(--radius);
+  background: var(--accent);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 20px;
+  color: #fff;
+  flex-shrink: 0;
+  font-weight: 700;
+  letter-spacing: 1px;
+}
+.skill-main { flex:1; min-width:0 }
+.skill-main h1 {
+  font-size: 20px;
+  font-weight: 700;
+  color: var(--text-primary);
+  line-height: 1.3;
+}
+.skill-desc {
+  margin-top: 8px;
+  font-size: 13px;
+  color: var(--text-secondary);
+  line-height: 1.6;
 }
 
-/* ── 标签 ── */
-.tag-row{
-  display:flex;flex-wrap:wrap;gap:8px;margin-top:14px
+/* ── 评分概览条 ── */
+.rating-strip {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-top: 10px;
+  flex-wrap: wrap;
 }
-.tag{
-  display:inline-flex;align-items:center;gap:4px;
-  padding:4px 14px;border-radius:20px;
-  font-size:13px;color:#475569;background:#f1f5f9;font-weight:500
+.rating-big-score {
+  font-size: 34px;
+  font-weight: 800;
+  color: var(--text-primary);
+  line-height: 1;
+  letter-spacing: -1px;
+}
+.rating-meta {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+.rating-label {
+  font-size: 12px;
+  color: var(--text-muted);
+  font-weight: 500;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+.rating-badge {
+  display: inline-flex;
+  align-items: center;
+  padding: 2px 10px;
+  border-radius: var(--radius);
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0.3px;
+}
+.rating-excellent { background: var(--success-bg); color: var(--success); }
+.rating-good      { background: #deebff; color: var(--accent); }
+.rating-average   { background: var(--warning-bg); color: var(--warning); }
+.rating-poor      { background: var(--danger-bg); color: var(--danger); }
+
+/* ── 徽章 ── */
+.badge {
+  display: inline-flex;
+  align-items: center;
+  padding: 3px 10px;
+  border-radius: var(--radius);
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0.2px;
+}
+.badge-secure    { background: var(--success-bg); color: var(--success); border: 1px solid #b7e5ce; }
+.badge-risk      { background: var(--warning-bg); color: var(--warning); border: 1px solid #ffe380; }
+.badge-unsafe    { background: var(--danger-bg); color: var(--danger); border: 1px solid #ffbdad; }
+.badge-source    { background: #f4f5f7; color: var(--text-muted); border: 1px solid var(--border-light); }
+.badge-tag       { background: #f4f5f7; color: var(--text-secondary); font-weight: 500; }
+
+/* ── 标签行 ── */
+.tag-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-top: 8px;
 }
 
-/* ── 元信息行 ── */
-.meta-row{
-  display:flex;flex-wrap:wrap;align-items:center;
-  gap:16px;margin-top:14px;font-size:13px;color:#94a3b8
+/* ── 统计行 ── */
+.stats-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 22px;
+  margin-top: 16px;
+  padding-top: 14px;
+  border-top: 1px solid var(--border-light);
 }
-.meta-item{display:flex;align-items:center;gap:4px}
+.stat-item { text-align: left }
+.stat-value {
+  font-size: 18px;
+  font-weight: 700;
+  color: var(--text-primary);
+  line-height: 1.2;
+}
+.stat-label {
+  font-size: 11px;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  margin-top: 2px;
+}
+.stat-divider {
+  width: 1px;
+  height: 32px;
+  background: var(--border);
+}
+.author-link {
+  font-size: 13px;
+  color: var(--accent);
+  text-decoration: none;
+  font-weight: 500;
+}
+.lab-badges { display: flex; gap: 12px; flex-wrap: wrap; margin-left: auto }
+.lab-badge {
+  font-size: 11px;
+  color: var(--success);
+  font-weight: 500;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  background: var(--success-bg);
+  padding: 2px 8px;
+  border-radius: var(--radius);
+}
+.meta-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 16px;
+  margin-top: 10px;
+  font-size: 12px;
+  color: var(--text-muted);
+}
+.meta-item { display: flex; align-items: center; gap: 4px }
 
-/* ── 统计行（下载/收藏/评分/作者/安全） ── */
-.stats-row{
-  display:flex;flex-wrap:wrap;align-items:center;
-  gap:24px;margin-top:20px;padding-top:20px;
-  border-top:1px solid #f1f5f9
-}
-.stat-item{text-align:center}
-.stat-value{font-size:16px;font-weight:700;color:#1e293b}
-.stat-label{font-size:12px;color:#94a3b8;margin-top:2px}
-.stat-divider{width:1px;height:28px;background:#e2e8f0}
-.author-link{font-size:13px;color:#3b82f6;text-decoration:none}
-.lab-badges{display:flex;gap:8px}
-.lab-badge{
-  font-size:11px;color:#10b981;
-  display:flex;align-items:center;gap:3px
+/* ── 标签页 ── */
+
+/* ── 章节标题 ── */
+.section-title {
+  font-size: 14px;
+  font-weight: 700;
+  color: var(--text-primary);
+  margin-bottom: 12px;
+  padding-bottom: 8px;
+  border-bottom: 1px solid var(--border-light);
+  letter-spacing: 0.2px;
 }
 
-/* ── Tab 栏 ── */
-.tab-bar{
-  display:flex;gap:0;border-bottom:2px solid #e2e8f0;
-  margin-bottom:0;border-radius:16px 16px 0 0;overflow:hidden
+/* ── TRACE 五边形图表 ── */
+.pentagon-wrap {
+  display: flex;
+  gap: 32px;
+  align-items: center;
+  flex-wrap: wrap;
 }
-.tab-btn{
-  flex:1;padding:14px 20px;text-align:center;
-  font-size:14px;font-weight:500;color:#64748b;
-  background:#fff;border:none;cursor:pointer;transition:.15s
+.pentagon-chart {
+  flex-shrink: 0;
+  width: 220px;
 }
-.tab-btn.active{color:#2563eb;font-weight:600;border-bottom:3px solid #2563eb;margin-bottom:-2px}
-.tab-btn:hover{background:#f8fafc}
+.pentagon-chart svg {
+  display: block;
+  width: 100%;
+  height: auto;
+}
+.pentagon-desc {
+  flex: 1;
+  min-width: 260px;
+  font-size: 13px;
+  color: var(--text-secondary);
+  line-height: 1.7;
+}
+.pentagon-desc p {
+  margin-bottom: 8px;
+}
+.pentagon-desc strong {
+  color: var(--text-primary);
+}
+.pentagon-desc .dim-keyword { font-weight: 600 }
+.pentagon-desc .dim-keyword.t { color: #0052cc }
+.pentagon-desc .dim-keyword.r { color: #00875a }
+.pentagon-desc .dim-keyword.a { color: #e56910 }
+.pentagon-desc .dim-keyword.c { color: #6554c0 }
+.pentagon-desc .dim-keyword.e { color: #c9372c }
+.pentagon-desc .disclaimer {
+  margin-top: 12px;
+  padding: 8px 12px;
+  background: #fafbfc;
+  border-radius: var(--radius);
+  border: 1px solid var(--border-light);
+  font-size: 12px;
+  color: var(--text-muted);
+}
+@media (max-width: 700px) {
+  .pentagon-wrap { flex-direction: column; align-items: center }
+  .pentagon-chart { width: 100%; max-width: 340px }
+}
 
-/* ── TRACE 卡片网格 ── */
-.trace-grid{display:grid;grid-template-columns:repeat(5,1fr);gap:12px;margin-bottom:28px}
-@media(max-width:700px){.trace-grid{grid-template-columns:repeat(2,1fr)}}
-.trace-dim-card{border:1px solid #e2e8f0;border-radius:12px;padding:20px 16px;text-align:center}
-.trace-dim-letter{
-  display:inline-flex;align-items:center;justify-content:center;
-  width:42px;height:42px;border-radius:12px;
-  font-size:20px;font-weight:800;color:#fff;margin-bottom:10px
+/* ── 维度详解 ── */
+.dim-block { margin-bottom: 20px }
+.dim-block-header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 10px;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text-primary);
 }
-.trace-dim-name{font-size:14px;font-weight:600;color:#334155;margin-bottom:8px}
-.trace-dim-score{font-size:34px;font-weight:800;line-height:1}
-.trace-dim-bar{
-  height:5px;border-radius:3px;margin:10px auto 0;
-  background:#e2e8f0;overflow:hidden
+.dim-block-letter {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 22px; height: 22px;
+  border-radius: var(--radius);
+  color: #fff;
+  font-size: 12px;
+  font-weight: 800;
+  flex-shrink: 0;
 }
-.trace-dim-bar-fill{height:100%;border-radius:3px}
-.trace-dim-max{font-size:11px;color:#94a3b8;margin-top:4px}
-
-/* ── 子指标 ── */
-.sub-indicator-list{display:grid;gap:10px}
-.sub-indicator-row{
-  display:flex;align-items:center;gap:14px;
-  padding:12px 16px;border-radius:10px;
-  background:#f8fafc;border:1px solid #f1f5f9
+.dim-block-summary {
+  margin-top: 8px;
+  padding: 10px 14px;
+  border-radius: var(--radius);
+  background: #fafbfc;
+  border: 1px solid var(--border-light);
+  font-size: 12px;
+  color: var(--text-secondary);
+  line-height: 1.6;
+  border-left: 3px solid var(--accent);
 }
-.sub-indicator-name{font-size:13px;font-weight:500;color:#334155;width:100px;flex-shrink:0}
-.sub-indicator-desc{font-size:12px;color:#94a3b8;flex:1;min-width:0}
-.sub-indicator-score{
-  font-size:14px;font-weight:700;width:26px;text-align:center;flex-shrink:0
+.sub-indicator-list { display: grid; gap: 4px }
+.sub-indicator-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 14px;
+  border-radius: var(--radius);
+  background: #fafbfc;
+  border: 1px solid var(--border-light);
 }
-.sub-indicator-bar{height:5px;background:#e2e8f0;border-radius:3px;flex:1.5;min-width:40px;overflow:hidden}
-.sub-indicator-bar-fill{height:100%;border-radius:3px}
-.sub-indicator-comment{font-size:11px;color:#94a3b8;width:120px;flex-shrink:0;overflow:hidden;white-space:nowrap;text-overflow:ellipsis}
-
-/* ── 维度区块 ── */
-.dim-block{margin-bottom:28px}
-.dim-block-header{
-  display:flex;align-items:center;gap:10px;
-  margin-bottom:14px;font-size:15px;font-weight:600;color:#1e293b
+.sub-indicator-name {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--text-primary);
+  width: 90px;
+  flex-shrink: 0;
 }
-.dim-block-letter{
-  display:inline-flex;align-items:center;justify-content:center;
-  width:28px;height:28px;border-radius:8px;
-  color:#fff;font-size:14px;font-weight:800;flex-shrink:0
+.sub-indicator-desc {
+  font-size: 11px;
+  color: var(--text-muted);
+  flex: 1;
+  min-width: 0;
 }
-.dim-block-summary{
-  margin-top:12px;padding:12px 16px;border-radius:10px;
-  background:#f8fafc;font-size:13px;color:#64748b;line-height:1.7
+.sub-indicator-score {
+  font-size: 13px;
+  font-weight: 700;
+  width: 20px;
+  text-align: center;
+  flex-shrink: 0;
+}
+.sub-indicator-bar {
+  height: 3px;
+  background: var(--border-light);
+  border-radius: 2px;
+  flex: 1.5;
+  min-width: 40px;
+  overflow: hidden;
+}
+.sub-indicator-bar-fill {
+  height: 100%;
+  border-radius: 2px;
+}
+.sub-indicator-comment {
+  font-size: 11px;
+  color: var(--text-muted);
+  width: 110px;
+  flex-shrink: 0;
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
 }
 
 /* ── 安全发现 ── */
-.finding-item{
-  border-left:3px solid #e2e8f0;
-  padding:12px 16px;margin-bottom:8px;
-  border-radius:0 8px 8px 0;background:#f8fafc
+.finding-item {
+  border-left: 3px solid var(--border);
+  padding: 10px 14px;
+  margin-bottom: 6px;
+  border-radius: 0 var(--radius) var(--radius) 0;
+  background: #fafbfc;
+  border-left-color: var(--border);
 }
-.finding-header{display:flex;align-items:center;gap:8px;margin-bottom:4px}
-.finding-severity{
-  padding:2px 8px;border-radius:10px;font-size:11px;font-weight:600
+.finding-item.finding-critical { border-left-color: var(--danger); background: #fff8f7 }
+.finding-item.finding-warning  { border-left-color: var(--warning); background: #fffcf5 }
+.finding-item.finding-info     { border-left-color: var(--accent); background: #f7faff }
+.finding-header {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-bottom: 3px;
 }
-.finding-severity-critical{background:#fef2f2;color:#ef4444}
-.finding-severity-warning{background:#fffbeb;color:#d97706}
-.finding-severity-info{background:#eff6ff;color:#3b82f6}
-.finding-category{font-size:11px;color:#94a3b8}
-.finding-desc{font-size:13px;color:#334155}
-.finding-file{font-size:11px;font-family:"JetBrains Mono",monospace;color:#94a3b8;margin-top:4px}
-.finding-suggestion{font-size:11px;color:#3b82f6;margin-top:2px}
+.finding-severity {
+  padding: 1px 8px;
+  border-radius: var(--radius);
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.3px;
+  text-transform: uppercase;
+}
+.finding-severity-critical { background: var(--danger-bg); color: var(--danger) }
+.finding-severity-warning  { background: var(--warning-bg); color: var(--warning) }
+.finding-severity-info     { background: #deebff; color: var(--accent) }
+.finding-category {
+  font-size: 11px;
+  color: var(--text-muted);
+  font-weight: 500;
+}
+.finding-desc { font-size: 13px; color: var(--text-primary); line-height: 1.6 }
+.finding-file {
+  font-size: 11px;
+  font-family: var(--font-mono);
+  color: var(--text-muted);
+  margin-top: 4px;
+}
+.finding-suggestion {
+  font-size: 11px;
+  color: var(--accent);
+  margin-top: 2px;
+  font-weight: 500;
+}
 
-/* ── 结论 ── */
-.verdict-banner{
-  display:flex;align-items:center;gap:12px;padding:16px 20px;
-  border-radius:12px;font-size:14px;font-weight:600
+/* ── 审查结论条 ── */
+.verdict-banner {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 12px 16px;
+  border-radius: var(--radius);
+  font-size: 13px;
+  font-weight: 600;
 }
-.verdict-pass{background:#ecfdf5;color:#10b981;border:1px solid #a7f3d0}
-.verdict-conditional{background:#fffbeb;color:#d97706;border:1px solid #fde68a}
-.verdict-reject{background:#fef2f2;color:#ef4444;border:1px solid #fecaca}
+.verdict-banner .verdict-icon {
+  font-size: 16px;
+  font-weight: 700;
+  width: 24px; height: 24px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: var(--radius);
+}
+.verdict-pass        { background: var(--success-bg); color: var(--success); border: 1px solid #b7e5ce; }
+.verdict-pass .verdict-icon        { background: var(--success); color: #fff }
+.verdict-conditional { background: var(--warning-bg); color: var(--warning); border: 1px solid #ffe380; }
+.verdict-conditional .verdict-icon { background: var(--warning); color: #fff }
+.verdict-reject      { background: var(--danger-bg); color: var(--danger); border: 1px solid #ffbdad; }
+.verdict-reject .verdict-icon      { background: var(--danger); color: #fff }
 
 /* ── 汇总表 ── */
-.summary-table{width:100%;border-collapse:collapse;font-size:13px}
-.summary-table tr{border-bottom:1px solid #f1f5f9}
-.summary-table td{padding:14px 16px}
-.summary-table td:first-child{color:#64748b;width:140px;font-weight:500}
-.summary-table td:last-child{font-weight:500;color:#1e293b}
-
-/* ── 推荐卡片 ── */
-.related-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(240px,1fr));gap:12px;margin-top:16px}
-.related-item{
-  border:1px solid #e2e8f0;border-radius:12px;padding:16px;display:flex;gap:12px;background:#fff
+.summary-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 13px;
 }
-.related-avatar{
-  width:44px;height:44px;border-radius:10px;
-  background:linear-gradient(135deg,#2563eb,#8b5cf6);
-  display:flex;align-items:center;justify-content:center;
-  color:#fff;font-weight:700;font-size:16px;flex-shrink:0
+.summary-table tr { border-bottom: 1px solid var(--border-light) }
+.summary-table td {
+  padding: 9px 14px;
+  vertical-align: middle;
 }
-.related-info{min-width:0}
-.related-name{font-size:14px;font-weight:600;color:#1e293b;margin-bottom:2px}
-.related-desc{font-size:12px;color:#64748b;overflow:hidden;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical}
-.related-meta{font-size:11px;color:#94a3b8;margin-top:4px}
+.summary-table td:first-child {
+  color: var(--text-secondary);
+  width: 120px;
+  font-weight: 500;
+  font-size: 12px;
+  text-transform: uppercase;
+  letter-spacing: 0.3px;
+}
+.summary-table td:last-child {
+  font-weight: 500;
+  color: var(--text-primary);
+}
 
-/* ── 通用 ── */
-.section-title{font-size:16px;font-weight:700;color:#0f172a;margin-bottom:16px;display:flex;align-items:center;gap:8px}
-.mono{font-family:"JetBrains Mono","Fira Code",monospace}
-.empty-state{text-align:center;padding:32px;color:#94a3b8;font-size:14px}
+/* ── 空状态 ── */
+.empty-state {
+  text-align: center;
+  padding: 24px;
+  color: var(--text-muted);
+  font-size: 13px;
+  background: #fafbfc;
+  border-radius: var(--radius);
+  border: 1px dashed var(--border);
+}
+
+/* ── 打印优化 ── */
+@media print {
+  body { background: #fff }
+  .card { box-shadow: none; border: 1px solid #ddd; break-inside: avoid }
+  .tab-bar { display: none }
+}
 </style>
 </head>
 <body>
 <div class="container">
 
-<!-- ═══════════════════════════════════════════════════
-     卡片 1：技能头部（严格复刻 SkillHub 布局）
-     ═══════════════════════════════════════════════════ -->
+<div class="page-header">
+  <h1>TRACE 评测报告</h1>
+  <div class="subtitle">SkillScan &middot; 技能安全审核</div>
+</div>
+
+<!-- ═══ 卡片 1：技能头部 ═══ -->
 <div class="card">
   <div class="skill-top">
-    <div class="skill-avatar">Ex</div>
+    <div class="skill-avatar">AI</div>
     <div class="skill-main">
-      <h1>Excel Formula</h1>
-      <div class="rating-row">
+      <h1>AI 代码审查助手</h1>
+      <div class="rating-strip">
         <div class="rating-big-score">4.2</div>
-        <div>
-          <div class="rating-big-label">/ 5.0 AI 评分</div>
-          <div>
-            <span class="rating-big-badge">★★★★☆ 优秀</span>
-          </div>
+        <div class="rating-meta">
+          <div class="rating-label">综合评分 / 5.0</div>
+          <span class="rating-badge rating-good">&#9733;&#9733;&#9733;&#9733;&#9734;
+            良好
+          </span>
         </div>
-        <span class="secure-badge">🛡️ 安全</span>
-        <span class="source-label">源自 SkillHub</span>
+        <span class="badge badge-secure">安全</span>
+        <span class="badge badge-source">SkillHub</span>
       </div>
-      <div class="skill-desc">
-        通过自然语言描述需求，自动生成 Excel 公式。支持 VLOOKUP/XLOOKUP/SUMIFS/INDEX/MATCH 等各类函数，可以解释复杂公式的含义，也能将旧版 .xls 公式转换为动态数组公式。当用户需要进行 Excel 数据计算、公式编写、公式排错等操作时使用。
-      </div>
+      <div class="skill-desc">基于 GPT-4o 的智能代码审查工具，支持自动检测代码质量问题、安全漏洞、性能瓶颈，并提供修复建议。</div>
       <div class="tag-row">
-        <span class="tag">需配置 API Key</span>
-        <span class="tag">办公效率</span>
-        <span class="tag">数据分析</span>
-        <span class="tag">Excel</span>
+        <span class="badge badge-tag">开发工具</span>
+        <span class="badge badge-tag">devtools</span>
       </div>
     </div>
   </div>
 
-  <!-- 统计行 -->
   <div class="stats-row">
-    <div class="stat-item">
-      <div class="stat-value">5.3 万</div>
-      <div class="stat-label">次下载</div>
-    </div>
+    <div class="stat-item"><div class="stat-value">1.3 万</div><div class="stat-label">下载</div></div>
     <div class="stat-divider"></div>
-    <div class="stat-item">
-      <div class="stat-value">89</div>
-      <div class="stat-label">次收藏</div>
-    </div>
+    <div class="stat-item"><div class="stat-value">4</div><div class="stat-label">星标</div></div>
     <div class="stat-divider"></div>
-    <div class="stat-item">
-      <div class="stat-value">4.2</div>
-      <div class="stat-label">/ 5.0 AI 评分</div>
-    </div>
+    <div class="stat-item"><div class="stat-value">4.2</div><div class="stat-label">评分</div></div>
     <div class="stat-divider"></div>
     <div>
-      <a class="author-link" href="#">formulamaster</a>
-      <div style="color:#94a3b8;font-size:11px">作者</div>
+      <a class="author-link" href="#">keenteam</a>
+      <div class="stat-label">作者</div>
     </div>
     <div class="lab-badges">
-      <div class="lab-badge">✅ 科恩实验室 安全，无风险</div>
-      <div class="lab-badge">✅ 云鼎实验室 安全，无风险</div>
+      
+      <div class="lab-badge">科恩实验室 安全</div>
+      
+      <div class="lab-badge">云鼎实验室 安全</div>
+      
     </div>
   </div>
 
-  <!-- 元信息 -->
-  <div class="meta-row" style="margin-top:12px">
-    <span class="meta-item">🕐 2 天前更新</span>
-    <span class="meta-item">🔖 v2.1.0</span>
-    <span class="meta-item">📦 excel-formula</span>
+  <div class="meta-row">
+    <span class="meta-item">2026-06-15</span>
+    <span class="meta-item">v2.1.0</span>
+    <span class="meta-item">code-review-ai</span>
   </div>
 </div>
 
-<!-- ═══════════════════════════════════════════════════
-     卡片 2：Tab 栏 + TRACE 评测报告
-     ═══════════════════════════════════════════════════ -->
-<div class="card" style="padding:0;overflow:hidden">
-  <div class="tab-bar">
-    <button class="tab-btn">概述</button>
-    <button class="tab-btn">版本历史</button>
-    <button class="tab-btn">版本对比</button>
-    <button class="tab-btn active">评测报告</button>
-  </div>
+<!-- ═══ 卡片 2：TRACE 评测报告 ═══ -->
+<div class="card">
 
-  <div style="padding:32px 36px">
-    <!-- TRACE 五维度总览卡片 -->
-    <div class="section-title">📊 TRACE 评测体系</div>
-    <div class="trace-grid">
-      <!-- T -->
-      <div class="trace-dim-card">
-        <div class="trace-dim-letter" style="background:#3b82f6">T</div>
-        <div class="trace-dim-name">可信任度</div>
-        <div class="trace-dim-score" style="color:#3b82f6">4.5</div>
-        <div class="trace-dim-max">/ 5.0</div>
-        <div class="trace-dim-bar"><div class="trace-dim-bar-fill" style="width:90%;background:#3b82f6"></div></div>
+  <!-- 格式修复报告 -->
+    
+
+    <!-- TRACE 五边形评分图 -->
+    <div class="section-title" style="margin-top:18px">TRACE 五维度评分</div>
+
+    <div class="pentagon-wrap">
+      <div class="pentagon-chart">
+        <svg viewBox="0 0 260 300" xmlns="http://www.w3.org/2000/svg">
+          <!-- 网格五边形 -->
+          
+          <polygon points="130.0,116.0 111.9,129.1 118.8,150.4 141.2,150.4 148.1,129.1" fill="none" stroke="#dfe1e6" stroke-width="1.5"/>
+          
+          <polygon points="130.0,97.0 93.9,123.3 107.7,165.7 152.3,165.7 166.1,123.3" fill="none" stroke="#dfe1e6" stroke-width="1.5"/>
+          
+          <polygon points="130.0,78.0 75.8,117.4 96.5,181.1 163.5,181.1 184.2,117.4" fill="none" stroke="#dfe1e6" stroke-width="1.5"/>
+          
+          <polygon points="130.0,59.0 57.7,111.5 85.3,196.5 174.7,196.5 202.3,111.5" fill="none" stroke="#dfe1e6" stroke-width="1.5"/>
+          
+          <polygon points="130.0,40.0 39.6,105.6 74.2,211.9 185.8,211.9 220.4,105.6" fill="none" stroke="#c1c7d0" stroke-width="2"/>
+          
+
+          <!-- 轴线 -->
+          
+          <line x1="130" y1="135" x2="130.0" y2="40.0" stroke="#ebecf0" stroke-width="1"/>
+          
+          <line x1="130" y1="135" x2="39.6" y2="105.6" stroke="#ebecf0" stroke-width="1"/>
+          
+          <line x1="130" y1="135" x2="74.2" y2="211.9" stroke="#ebecf0" stroke-width="1"/>
+          
+          <line x1="130" y1="135" x2="185.8" y2="211.9" stroke="#ebecf0" stroke-width="1"/>
+          
+          <line x1="130" y1="135" x2="220.4" y2="105.6" stroke="#ebecf0" stroke-width="1"/>
+          
+
+          <!-- 评分填充多边形 -->
+          <polygon points="130.0,49.5 57.7,111.5 83.1,199.6 180.3,204.2 198.7,112.7" fill="rgba(0,82,204,0.08)" stroke="#0052cc" stroke-width="2" stroke-linejoin="round"/>
+
+          <!-- 顶点圆点 -->
+          
+          <circle cx="130.0" cy="40.0" r="4" fill="#0052cc" stroke="#fff" stroke-width="2"/>
+          
+          <circle cx="39.6" cy="105.6" r="4" fill="#00875a" stroke="#fff" stroke-width="2"/>
+          
+          <circle cx="74.2" cy="211.9" r="4" fill="#e56910" stroke="#fff" stroke-width="2"/>
+          
+          <circle cx="185.8" cy="211.9" r="4" fill="#6554c0" stroke="#fff" stroke-width="2"/>
+          
+          <circle cx="220.4" cy="105.6" r="4" fill="#c9372c" stroke="#fff" stroke-width="2"/>
+          
+
+          <!-- 顶点标签 -->
+          
+          <text x="130" y="24.0" text-anchor="middle" dominant-baseline="middle" font-size="12" font-weight="600" fill="#172b4d" font-family="var(--font)">T 可信任度</text>
+          
+          <text x="21.4" y="100.7" text-anchor="middle" dominant-baseline="middle" font-size="12" font-weight="600" fill="#172b4d" font-family="var(--font)">R 可靠性</text>
+          
+          <text x="64.8" y="224.8" text-anchor="middle" dominant-baseline="middle" font-size="12" font-weight="600" fill="#172b4d" font-family="var(--font)">A 适用性</text>
+          
+          <text x="195.2" y="224.8" text-anchor="middle" dominant-baseline="middle" font-size="12" font-weight="600" fill="#172b4d" font-family="var(--font)">C 规范性</text>
+          
+          <text x="238.6" y="100.7" text-anchor="middle" dominant-baseline="middle" font-size="12" font-weight="600" fill="#172b4d" font-family="var(--font)">E 有效性</text>
+          
+        </svg>
       </div>
-      <!-- R -->
-      <div class="trace-dim-card">
-        <div class="trace-dim-letter" style="background:#10b981">R</div>
-        <div class="trace-dim-name">可靠性</div>
-        <div class="trace-dim-score" style="color:#10b981">4.3</div>
-        <div class="trace-dim-max">/ 5.0</div>
-        <div class="trace-dim-bar"><div class="trace-dim-bar-fill" style="width:86%;background:#10b981"></div></div>
-      </div>
-      <!-- A -->
-      <div class="trace-dim-card">
-        <div class="trace-dim-letter" style="background:#f59e0b">A</div>
-        <div class="trace-dim-name">适用性</div>
-        <div class="trace-dim-score" style="color:#f59e0b">4.0</div>
-        <div class="trace-dim-max">/ 5.0</div>
-        <div class="trace-dim-bar"><div class="trace-dim-bar-fill" style="width:80%;background:#f59e0b"></div></div>
-      </div>
-      <!-- C -->
-      <div class="trace-dim-card">
-        <div class="trace-dim-letter" style="background:#8b5cf6">C</div>
-        <div class="trace-dim-name">规范性</div>
-        <div class="trace-dim-score" style="color:#8b5cf6">3.8</div>
-        <div class="trace-dim-max">/ 5.0</div>
-        <div class="trace-dim-bar"><div class="trace-dim-bar-fill" style="width:76%;background:#8b5cf6"></div></div>
-      </div>
-      <!-- E -->
-      <div class="trace-dim-card">
-        <div class="trace-dim-letter" style="background:#ef4444">E</div>
-        <div class="trace-dim-name">有效性</div>
-        <div class="trace-dim-score" style="color:#ef4444">4.5</div>
-        <div class="trace-dim-max">/ 5.0</div>
-        <div class="trace-dim-bar"><div class="trace-dim-bar-fill" style="width:90%;background:#ef4444"></div></div>
+
+      <div class="pentagon-desc">
+        <p><strong>TRACE 评测维度说明</strong></p>
+        <p>
+          SkillHub TRACE 评测体系从
+          <span class="dim-keyword t">可信任度（Trust）</span>、
+          <span class="dim-keyword r">可靠性（Reliability）</span>、
+          <span class="dim-keyword a">适用性（Adaptability）</span>、
+          <span class="dim-keyword c">规范性（Convention）</span>、
+          <span class="dim-keyword e">有效性（Effectiveness）</span>
+          五个维度全面评估 Skill 的质量。该体系基于 SkillHub 平台的长期运营实践及腾讯新闻团队的内容生产经验沉淀而成，旨在帮助用户快速识别高质量 Skill。
+          <a href="https://www.skillhub.cn" style="color:var(--accent);text-decoration:none;font-weight:500">了解详情</a>
+        </p>
+        <div class="disclaimer">评测主要基于 AI 自动化检测，结果供参考。</div>
       </div>
     </div>
 
-    <!-- TRACE 维度详解 -->
-    <div class="section-title" style="margin-top:32px">📋 维度详解</div>
+    <!-- 维度详解 -->
+    <div class="section-title" style="margin-top:18px">维度详解</div>
 
-    <!-- T — Trust -->
+    
     <div class="dim-block">
       <div class="dim-block-header">
-        <div class="dim-block-letter" style="background:#3b82f6">T</div>
-        可信任度 · 4.5 / 5.0
+        <div class="dim-block-letter" style="background:#0052cc">T</div>
+        可信任度 &middot; 4.5 / 5.0
       </div>
       <div class="sub-indicator-list">
+        
         <div class="sub-indicator-row">
           <div class="sub-indicator-name">安全检测</div>
           <div class="sub-indicator-desc">是否通过安全审查，有无漏洞</div>
-          <div class="sub-indicator-score" style="color:#3b82f6">5</div>
-          <div class="sub-indicator-bar"><div class="sub-indicator-bar-fill" style="width:100%;background:#3b82f6"></div></div>
-          <div class="sub-indicator-comment">💬 纯文档驱动，无外部依赖</div>
+          <div class="sub-indicator-score" style="color:#0052cc">0</div>
+          <div class="sub-indicator-bar"><div class="sub-indicator-bar-fill" style="width:0.0%;background:#0052cc"></div></div>
+          
         </div>
+        
         <div class="sub-indicator-row">
           <div class="sub-indicator-name">最小权限</div>
           <div class="sub-indicator-desc">是否遵循最小权限原则</div>
-          <div class="sub-indicator-score" style="color:#3b82f6">5</div>
-          <div class="sub-indicator-bar"><div class="sub-indicator-bar-fill" style="width:100%;background:#3b82f6"></div></div>
-          <div class="sub-indicator-comment">💬 仅读取 SKILL.md，无文件操作</div>
+          <div class="sub-indicator-score" style="color:#0052cc">0</div>
+          <div class="sub-indicator-bar"><div class="sub-indicator-bar-fill" style="width:0.0%;background:#0052cc"></div></div>
+          
         </div>
+        
         <div class="sub-indicator-row">
           <div class="sub-indicator-name">敏感信息保护</div>
           <div class="sub-indicator-desc">是否妥善保护用户敏感数据</div>
-          <div class="sub-indicator-score" style="color:#3b82f6">4</div>
-          <div class="sub-indicator-bar"><div class="sub-indicator-bar-fill" style="width:80%;background:#3b82f6"></div></div>
-          <div class="sub-indicator-comment">💬 未发现硬编码凭据</div>
+          <div class="sub-indicator-score" style="color:#0052cc">0</div>
+          <div class="sub-indicator-bar"><div class="sub-indicator-bar-fill" style="width:0.0%;background:#0052cc"></div></div>
+          
         </div>
+        
         <div class="sub-indicator-row">
           <div class="sub-indicator-name">国内可用性</div>
           <div class="sub-indicator-desc">是否在国内网络环境可用</div>
-          <div class="sub-indicator-score" style="color:#3b82f6">4</div>
-          <div class="sub-indicator-bar"><div class="sub-indicator-bar-fill" style="width:80%;background:#3b82f6"></div></div>
-          <div class="sub-indicator-comment">💬 引用 GitHub，但非强依赖</div>
+          <div class="sub-indicator-score" style="color:#0052cc">0</div>
+          <div class="sub-indicator-bar"><div class="sub-indicator-bar-fill" style="width:0.0%;background:#0052cc"></div></div>
+          
         </div>
+        
       </div>
-      <div class="dim-block-summary">
-        📝 技能不涉及网络请求和系统命令执行，遵循最小权限原则。SKILL.md 引用 GitHub 文档站点，不影响核心功能。
-      </div>
+      
+      <div class="dim-block-summary">SKILL.md 描述准确，无 Prompt 注入风险；脚本代码仅调用 OpenAI API，无恶意网络请求。</div>
+      
     </div>
-
-    <!-- R — Reliability -->
+    
     <div class="dim-block">
       <div class="dim-block-header">
-        <div class="dim-block-letter" style="background:#10b981">R</div>
-        可靠性 · 4.3 / 5.0
+        <div class="dim-block-letter" style="background:#00875a">R</div>
+        可靠性 &middot; 4.0 / 5.0
       </div>
       <div class="sub-indicator-list">
+        
         <div class="sub-indicator-row">
-          <div class="sub-indicator-name">稳定运行</div><div class="sub-indicator-desc">是否能在正常条件下稳定运行</div>
-          <div class="sub-indicator-score" style="color:#10b981">5</div>
-          <div class="sub-indicator-bar"><div class="sub-indicator-bar-fill" style="width:100%;background:#10b981"></div></div>
-          <div class="sub-indicator-comment">💬 单一功能，逻辑清晰</div>
+          <div class="sub-indicator-name">稳定运行</div>
+          <div class="sub-indicator-desc">是否能在正常条件下稳定运行</div>
+          <div class="sub-indicator-score" style="color:#00875a">0</div>
+          <div class="sub-indicator-bar"><div class="sub-indicator-bar-fill" style="width:0.0%;background:#00875a"></div></div>
+          
         </div>
+        
         <div class="sub-indicator-row">
-          <div class="sub-indicator-name">一致结果</div><div class="sub-indicator-desc">相同输入是否产生一致输出</div>
-          <div class="sub-indicator-score" style="color:#10b981">4</div>
-          <div class="sub-indicator-bar"><div class="sub-indicator-bar-fill" style="width:80%;background:#10b981"></div></div>
-          <div class="sub-indicator-comment">💬 Prompt 确定性较高</div>
+          <div class="sub-indicator-name">一致结果</div>
+          <div class="sub-indicator-desc">相同输入是否产生一致输出</div>
+          <div class="sub-indicator-score" style="color:#00875a">0</div>
+          <div class="sub-indicator-bar"><div class="sub-indicator-bar-fill" style="width:0.0%;background:#00875a"></div></div>
+          
         </div>
+        
         <div class="sub-indicator-row">
-          <div class="sub-indicator-name">边界输入处理</div><div class="sub-indicator-desc">对边界/异常输入的容错能力</div>
-          <div class="sub-indicator-score" style="color:#10b981">4</div>
-          <div class="sub-indicator-bar"><div class="sub-indicator-bar-fill" style="width:80%;background:#10b981"></div></div>
-          <div class="sub-indicator-comment">💬 文档覆盖常见错误场景</div>
+          <div class="sub-indicator-name">边界输入处理</div>
+          <div class="sub-indicator-desc">对边界/异常输入的容错能力</div>
+          <div class="sub-indicator-score" style="color:#00875a">0</div>
+          <div class="sub-indicator-bar"><div class="sub-indicator-bar-fill" style="width:0.0%;background:#00875a"></div></div>
+          
         </div>
+        
         <div class="sub-indicator-row">
-          <div class="sub-indicator-name">异常反馈机制</div><div class="sub-indicator-desc">遇到错误时是否有清晰的反馈</div>
-          <div class="sub-indicator-score" style="color:#10b981">4</div>
-          <div class="sub-indicator-bar"><div class="sub-indicator-bar-fill" style="width:80%;background:#10b981"></div></div>
-          <div class="sub-indicator-comment">💬 错误提示较友好</div>
+          <div class="sub-indicator-name">异常反馈机制</div>
+          <div class="sub-indicator-desc">遇到错误时是否有清晰的反馈</div>
+          <div class="sub-indicator-score" style="color:#00875a">0</div>
+          <div class="sub-indicator-bar"><div class="sub-indicator-bar-fill" style="width:0.0%;background:#00875a"></div></div>
+          
         </div>
+        
       </div>
-      <div class="dim-block-summary">
-        📝 代码结构整洁，无状态管理，同一输入大概率产出一致结果。文档覆盖了错误的公式语法场景。
-      </div>
+      
+      <div class="dim-block-summary">代码结构清晰，错误处理完善，包含超时重试机制。</div>
+      
     </div>
-
-    <!-- A — Adaptability -->
+    
     <div class="dim-block">
       <div class="dim-block-header">
-        <div class="dim-block-letter" style="background:#f59e0b">A</div>
-        适用性 · 4.0 / 5.0
+        <div class="dim-block-letter" style="background:#e56910">A</div>
+        适用性 &middot; 4.2 / 5.0
       </div>
       <div class="sub-indicator-list">
+        
         <div class="sub-indicator-row">
-          <div class="sub-indicator-name">场景匹配度</div><div class="sub-indicator-desc">功能与目标场景的匹配程度</div>
-          <div class="sub-indicator-score" style="color:#f59e0b">5</div>
-          <div class="sub-indicator-bar"><div class="sub-indicator-bar-fill" style="width:100%;background:#f59e0b"></div></div>
-          <div class="sub-indicator-comment">💬 高度匹配 Excel 使用场景</div>
+          <div class="sub-indicator-name">场景匹配度</div>
+          <div class="sub-indicator-desc">功能与目标场景的匹配程度</div>
+          <div class="sub-indicator-score" style="color:#e56910">0</div>
+          <div class="sub-indicator-bar"><div class="sub-indicator-bar-fill" style="width:0.0%;background:#e56910"></div></div>
+          
         </div>
+        
         <div class="sub-indicator-row">
-          <div class="sub-indicator-name">触发条件清晰度</div><div class="sub-indicator-desc">触发使用条件的明确性</div>
-          <div class="sub-indicator-score" style="color:#f59e0b">4</div>
-          <div class="sub-indicator-bar"><div class="sub-indicator-bar-fill" style="width:80%;background:#f59e0b"></div></div>
-          <div class="sub-indicator-comment">💬 关键词明确，可能出现误触发</div>
+          <div class="sub-indicator-name">触发条件清晰度</div>
+          <div class="sub-indicator-desc">触发使用条件的明确性</div>
+          <div class="sub-indicator-score" style="color:#e56910">0</div>
+          <div class="sub-indicator-bar"><div class="sub-indicator-bar-fill" style="width:0.0%;background:#e56910"></div></div>
+          
         </div>
+        
         <div class="sub-indicator-row">
-          <div class="sub-indicator-name">能力边界界定</div><div class="sub-indicator-desc">是否清晰界定能做/不能做什么</div>
-          <div class="sub-indicator-score" style="color:#f59e0b">3</div>
-          <div class="sub-indicator-bar"><div class="sub-indicator-bar-fill" style="width:60%;background:#f59e0b"></div></div>
-          <div class="sub-indicator-comment">💬 缺少明确的能力边界说明</div>
+          <div class="sub-indicator-name">能力边界界定</div>
+          <div class="sub-indicator-desc">是否清晰界定能做/不能做什么</div>
+          <div class="sub-indicator-score" style="color:#e56910">0</div>
+          <div class="sub-indicator-bar"><div class="sub-indicator-bar-fill" style="width:0.0%;background:#e56910"></div></div>
+          
         </div>
+        
         <div class="sub-indicator-row">
-          <div class="sub-indicator-name">输入输出规范性</div><div class="sub-indicator-desc">输入输出格式是否规范</div>
-          <div class="sub-indicator-score" style="color:#f59e0b">4</div>
-          <div class="sub-indicator-bar"><div class="sub-indicator-bar-fill" style="width:80%;background:#f59e0b"></div></div>
-          <div class="sub-indicator-comment">💬 输出格式统一</div>
+          <div class="sub-indicator-name">输入输出规范性</div>
+          <div class="sub-indicator-desc">输入输出格式是否规范</div>
+          <div class="sub-indicator-score" style="color:#e56910">0</div>
+          <div class="sub-indicator-bar"><div class="sub-indicator-bar-fill" style="width:0.0%;background:#e56910"></div></div>
+          
         </div>
+        
       </div>
-      <div class="dim-block-summary">
-        📝 功能与 Excel 公式场景高度匹配。建议增加能力边界说明章节，避免用户对跨应用公式产生不切实际的期望。
-      </div>
+      
+      <div class="dim-block-summary">适用于代码审查场景，触发条件明确。</div>
+      
     </div>
-
-    <!-- C — Convention -->
+    
     <div class="dim-block">
       <div class="dim-block-header">
-        <div class="dim-block-letter" style="background:#8b5cf6">C</div>
-        规范性 · 3.8 / 5.0
+        <div class="dim-block-letter" style="background:#6554c0">C</div>
+        规范性 &middot; 4.5 / 5.0
       </div>
       <div class="sub-indicator-list">
+        
         <div class="sub-indicator-row">
-          <div class="sub-indicator-name">渐进式披露</div><div class="sub-indicator-desc">文档是否循序渐进披露信息</div>
-          <div class="sub-indicator-score" style="color:#8b5cf6">4</div>
-          <div class="sub-indicator-bar"><div class="sub-indicator-bar-fill" style="width:80%;background:#8b5cf6"></div></div>
-          <div class="sub-indicator-comment">💬 由浅入深，层次合理</div>
+          <div class="sub-indicator-name">渐进式披露</div>
+          <div class="sub-indicator-desc">文档是否循序渐进披露信息</div>
+          <div class="sub-indicator-score" style="color:#6554c0">0</div>
+          <div class="sub-indicator-bar"><div class="sub-indicator-bar-fill" style="width:0.0%;background:#6554c0"></div></div>
+          
         </div>
+        
         <div class="sub-indicator-row">
-          <div class="sub-indicator-name">文档结构清晰度</div><div class="sub-indicator-desc">SKILL.md 组织结构是否清晰</div>
-          <div class="sub-indicator-score" style="color:#8b5cf6">4</div>
-          <div class="sub-indicator-bar"><div class="sub-indicator-bar-fill" style="width:80%;background:#8b5cf6"></div></div>
-          <div class="sub-indicator-comment">💬 标题层次清晰</div>
+          <div class="sub-indicator-name">文档结构清晰度</div>
+          <div class="sub-indicator-desc">SKILL.md 组织结构是否清晰</div>
+          <div class="sub-indicator-score" style="color:#6554c0">0</div>
+          <div class="sub-indicator-bar"><div class="sub-indicator-bar-fill" style="width:0.0%;background:#6554c0"></div></div>
+          
         </div>
+        
         <div class="sub-indicator-row">
-          <div class="sub-indicator-name">限制说明完整性</div><div class="sub-indicator-desc">是否完整说明能力和限制</div>
-          <div class="sub-indicator-score" style="color:#8b5cf6">3</div>
-          <div class="sub-indicator-bar"><div class="sub-indicator-bar-fill" style="width:60%;background:#8b5cf6"></div></div>
-          <div class="sub-indicator-comment">💬 缺少 API 限制说明</div>
+          <div class="sub-indicator-name">限制说明完整性</div>
+          <div class="sub-indicator-desc">是否完整说明能力和限制</div>
+          <div class="sub-indicator-score" style="color:#6554c0">0</div>
+          <div class="sub-indicator-bar"><div class="sub-indicator-bar-fill" style="width:0.0%;background:#6554c0"></div></div>
+          
         </div>
+        
         <div class="sub-indicator-row">
-          <div class="sub-indicator-name">示例充分性</div><div class="sub-indicator-desc">是否提供充分的典型示例</div>
-          <div class="sub-indicator-score" style="color:#8b5cf6">4</div>
-          <div class="sub-indicator-bar"><div class="sub-indicator-bar-fill" style="width:80%;background:#8b5cf6"></div></div>
-          <div class="sub-indicator-comment">💬 提供了多个实际场景示例</div>
+          <div class="sub-indicator-name">示例充分性</div>
+          <div class="sub-indicator-desc">是否提供充分的典型示例</div>
+          <div class="sub-indicator-score" style="color:#6554c0">0</div>
+          <div class="sub-indicator-bar"><div class="sub-indicator-bar-fill" style="width:0.0%;background:#6554c0"></div></div>
+          
         </div>
+        
       </div>
-      <div class="dim-block-summary">
-        📝 文档结构合理，示例较充分。建议补充限制条件章节，明确不支持的操作类型（如 VBA 脚本、Power Query 等）。
-      </div>
+      
+      <div class="dim-block-summary">SKILL.md 文档结构清晰，渐进式披露，示例充分。</div>
+      
     </div>
-
-    <!-- E — Effectiveness -->
+    
     <div class="dim-block">
       <div class="dim-block-header">
-        <div class="dim-block-letter" style="background:#ef4444">E</div>
-        有效性 · 4.5 / 5.0
+        <div class="dim-block-letter" style="background:#c9372c">E</div>
+        有效性 &middot; 3.8 / 5.0
       </div>
       <div class="sub-indicator-list">
+        
         <div class="sub-indicator-row">
-          <div class="sub-indicator-name">结果正确性</div><div class="sub-indicator-desc">输出结果是否正确</div>
-          <div class="sub-indicator-score" style="color:#ef4444">5</div>
-          <div class="sub-indicator-bar"><div class="sub-indicator-bar-fill" style="width:100%;background:#ef4444"></div></div>
-          <div class="sub-indicator-comment">💬 LLM 推理能力保证</div>
+          <div class="sub-indicator-name">结果正确性</div>
+          <div class="sub-indicator-desc">输出结果是否正确</div>
+          <div class="sub-indicator-score" style="color:#c9372c">0</div>
+          <div class="sub-indicator-bar"><div class="sub-indicator-bar-fill" style="width:0.0%;background:#c9372c"></div></div>
+          
         </div>
+        
         <div class="sub-indicator-row">
-          <div class="sub-indicator-name">输出完整性</div><div class="sub-indicator-desc">输出是否完整无缺失</div>
-          <div class="sub-indicator-score" style="color:#ef4444">5</div>
-          <div class="sub-indicator-bar"><div class="sub-indicator-bar-fill" style="width:100%;background:#ef4444"></div></div>
-          <div class="sub-indicator-comment">💬 输出包含公式、解释、注意事项</div>
+          <div class="sub-indicator-name">输出完整性</div>
+          <div class="sub-indicator-desc">输出是否完整无缺失</div>
+          <div class="sub-indicator-score" style="color:#c9372c">0</div>
+          <div class="sub-indicator-bar"><div class="sub-indicator-bar-fill" style="width:0.0%;background:#c9372c"></div></div>
+          
         </div>
+        
         <div class="sub-indicator-row">
-          <div class="sub-indicator-name">可直接使用性</div><div class="sub-indicator-desc">输出是否可直接使用</div>
-          <div class="sub-indicator-score" style="color:#ef4444">4</div>
-          <div class="sub-indicator-bar"><div class="sub-indicator-bar-fill" style="width:80%;background:#ef4444"></div></div>
-          <div class="sub-indicator-comment">💬 复制即用，偶尔需调整单元格引用</div>
+          <div class="sub-indicator-name">可直接使用性</div>
+          <div class="sub-indicator-desc">输出是否可直接使用</div>
+          <div class="sub-indicator-score" style="color:#c9372c">0</div>
+          <div class="sub-indicator-bar"><div class="sub-indicator-bar-fill" style="width:0.0%;background:#c9372c"></div></div>
+          
         </div>
+        
         <div class="sub-indicator-row">
-          <div class="sub-indicator-name">减少返工率</div><div class="sub-indicator-desc">是否能减少后续返工</div>
-          <div class="sub-indicator-score" style="color:#ef4444">4</div>
-          <div class="sub-indicator-bar"><div class="sub-indicator-bar-fill" style="width:80%;background:#ef4444"></div></div>
-          <div class="sub-indicator-comment">💬 大幅减少手动公式编写时间</div>
+          <div class="sub-indicator-name">减少返工率</div>
+          <div class="sub-indicator-desc">是否能减少后续返工</div>
+          <div class="sub-indicator-score" style="color:#c9372c">0</div>
+          <div class="sub-indicator-bar"><div class="sub-indicator-bar-fill" style="width:0.0%;background:#c9372c"></div></div>
+          
         </div>
+        
       </div>
-      <div class="dim-block-summary">
-        📝 输出质量高，公式语法正确且包含解释，可直接粘贴使用。在复杂嵌套场景下偶尔需要微调。
-      </div>
+      
+      <div class="dim-block-summary">核心功能完整，输出结果可直接使用。</div>
+      
     </div>
+    
 
     <!-- 安全审查 -->
-    <div class="section-title" style="margin-top:32px">🔒 安全审查</div>
-    <div class="finding-item">
+    <div class="section-title" style="margin-top:18px">安全审查</div>
+    
+    
+    <div class="finding-item finding-info">
       <div class="finding-header">
-        <span class="finding-severity finding-severity-info">ℹ️ 信息</span>
-        <span class="finding-category">[网络请求]</span>
+        <span class="finding-severity finding-severity-info">
+          信息
+        </span>
+        <span class="finding-category">网络请求</span>
       </div>
-      <div class="finding-desc">SKILL.md 引用了 Microsoft 官方文档链接 docs.microsoft.com/en-us/office/，属于文档引用，无安全风险。</div>
-      <div class="finding-file">📄 SKILL.md</div>
-      <div class="finding-suggestion">💡 建议在文档中标注该引用为可选参考资料。</div>
+      <div class="finding-desc">脚本通过 HTTPS 向 api.openai.com 发送请求，通信加密。</div>
+      <div class="finding-file">scripts/reviewer.py</div>
+      <div class="finding-suggestion">建议使用环境变量管理 API 地址。</div>
     </div>
-    <div class="finding-item">
+    
+    <div class="finding-item finding-info">
       <div class="finding-header">
-        <span class="finding-severity finding-severity-info">ℹ️ 信息</span>
-        <span class="finding-category">[文件操作]</span>
+        <span class="finding-severity finding-severity-info">
+          信息
+        </span>
+        <span class="finding-category">文件操作</span>
       </div>
-      <div class="finding-desc">未发现任何文件读取或写入操作。技能为纯 Prompt 驱动，仅通过对话提供公式生成服务。</div>
-      <div class="finding-file">📄 SKILL.md</div>
-      <div class="finding-suggestion">💡 无需修改。</div>
+      <div class="finding-desc">脚本读取用户指定的源代码文件进行审查，仅读取操作。</div>
+      <div class="finding-file">scripts/reviewer.py</div>
+      <div class="finding-suggestion">建议添加文件大小限制检查。</div>
     </div>
+    
+    
 
     <!-- 审查结论 -->
-    <div class="section-title" style="margin-top:32px">🏁 审查结论</div>
-    <div class="verdict-banner verdict-pass">✅ 通过 — 综合 TRACE 评分 4.2，未发现安全风险，可上线使用</div>
-
-    <div style="margin-top:20px">
-      <table class="summary-table">
-        <tr><td>综合评分</td><td><strong>4.2 / 5.0</strong> (优秀)</td></tr>
-        <tr><td>安全等级</td><td>安全</td></tr>
-        <tr><td>检测分类</td><td>办公效率 / 数据分析</td></tr>
-        <tr><td>审查结论</td><td><strong style="color:#10b981">✅ 通过</strong></td></tr>
-        <tr><td>扫描文件数</td><td>8 个</td></tr>
-        <tr><td>代码总行数</td><td>420 行</td></tr>
-        <tr><td>扫描耗时</td><td>3,200 ms</td></tr>
-      </table>
+    <div class="section-title" style="margin-top:18px">审查结论</div>
+    
+    <div class="verdict-banner verdict-pass">
+      <div class="verdict-icon">
+        &#10003;
+      </div>
+      <div>
+        <strong>通过</strong>
+         &mdash; 所有文件审查通过，未发现安全风险，代码质量良好，文档规范完整。
+      </div>
     </div>
-  </div>
-</div>
 
-<!-- ═══════════════════════════════════════════════════
-     卡片 3：相关推荐
-     ═══════════════════════════════════════════════════ -->
-<div class="card">
-  <div class="section-title" style="margin-bottom:16px">相关推荐</div>
-  <div class="related-grid">
-    <a class="related-item" href="#" style="text-decoration:none;color:inherit">
-      <div class="related-avatar">✏️</div>
-      <div class="related-info">
-        <div class="related-name">Word / DOCX</div>
-        <div class="related-desc">创建、检查和编辑 Microsoft Word 文档及 DOCX 文件，支持样式、编号、修订记录、表格、分节符及兼容性检查等功能。</div>
-        <div class="related-meta">⭐ 467 · 15.6 万下载</div>
-      </div>
-    </a>
-    <a class="related-item" href="#" style="text-decoration:none;color:inherit">
-      <div class="related-avatar">📊</div>
-      <div class="related-info">
-        <div class="related-name">PowerPoint / PPTX</div>
-        <div class="related-desc">创建、编辑和美化 Microsoft PowerPoint 演示文稿，支持幻灯片布局、母版设置、图片替换、表格和图表插入等。</div>
-        <div class="related-meta">⭐ 366 · 13.2 万下载</div>
-      </div>
-    </a>
-    <a class="related-item" href="#" style="text-decoration:none;color:inherit">
-      <div class="related-avatar">📄</div>
-      <div class="related-info">
-        <div class="related-name">PDF Tools</div>
-        <div class="related-desc">PDF 文件的创建、合并、拆分、提取页面、添加水印和文本提取等操作。</div>
-        <div class="related-meta">⭐ 198 · 8.7 万下载</div>
-      </div>
-    </a>
+    <div style="margin-top:18px">
+      <table class="summary-table">
+        <tr><td>综合评分</td><td><strong>4.2 / 5.0</strong> &mdash; 良好</td></tr>
+        <tr><td>安全等级</td><td>安全</td></tr>
+        <tr><td>检测分类</td><td>开发工具</td></tr>
+        <tr><td>审查结论</td><td><strong style="color:#00875a">PASS &mdash; 通过</strong></td></tr>
+        <tr><td>扫描文件</td><td>8 个文件</td></tr>
+        <tr><td>代码总行数</td><td>1247 行</td></tr>
+        <tr><td>扫描耗时</td><td>3.4 s</td></tr>
+      </table>
   </div>
 </div>
 
