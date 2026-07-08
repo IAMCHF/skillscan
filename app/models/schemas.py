@@ -41,9 +41,9 @@ TRACE_LETTER: dict[str, str] = {
 }
 
 TRACE_COLORS: dict[str, str] = {
-    "trust": "#3b82f6", "reliability": "#10b981",
-    "adaptability": "#f59e0b", "convention": "#8b5cf6",
-    "effectiveness": "#ef4444",
+    "trust": "#0052cc", "reliability": "#00875a",
+    "adaptability": "#e56910", "convention": "#6554c0",
+    "effectiveness": "#c9372c",
 }
 
 # 每个维度的 4 个子指标
