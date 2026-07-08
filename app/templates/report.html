@@ -618,11 +618,6 @@ body {
           <circle cx="{{ v.x }}" cy="{{ v.y }}" r="4" fill="{{ v.color }}" stroke="#fff" stroke-width="2"/>
           {% endfor %}
 
-          <!-- 分数标签 -->
-          {% for v in pentagon.vertices %}
-          <text x="{{ v.sx }}" y="{{ v.sy }}" text-anchor="middle" dominant-baseline="middle" font-size="18" font-weight="700" fill="{{ v.color }}" font-family="var(--font)">{{ v.score }}</text>
-          {% endfor %}
-
           <!-- 顶点标签 -->
           {% for v in pentagon.vertices %}
           <text x="{{ v.lx }}" y="{{ v.ly }}" text-anchor="middle" dominant-baseline="middle" font-size="12" font-weight="600" fill="#172b4d" font-family="var(--font)">{{ v.letter }} {{ v.name }}</text>
