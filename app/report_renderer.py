@@ -31,8 +31,8 @@ def _compute_pentagon(dim_data: list[dict]) -> dict:
     五边形顶点顺序（从顶部顺时针）：
     T(可信任度) → R(可靠性) → A(适用性) → C(规范性) → E(有效性)
     """
-    cx, cy = 185, 195
-    max_r = 130
+    cx, cy = 130, 135
+    max_r = 95
     # 5 个顶点角度（从顶部顺时针，SVG 坐标系 y 向下）
     angles_deg = [90, 162, 234, 306, 18]
 
@@ -58,7 +58,7 @@ def _compute_pentagon(dim_data: list[dict]) -> dict:
         score_points.append(f"{x},{y}")
 
     # 顶点标签（在最大五边形外侧）
-    label_offset = 22
+    label_offset = 16
     vertices = []
     for i, dim in enumerate(dim_data):
         angle = angles_deg[i]
@@ -66,15 +66,15 @@ def _compute_pentagon(dim_data: list[dict]) -> dict:
         x, y = _point(angle, max_r)
         lx, ly = _point(angle, max_r + label_offset)
         # 分数文字位置（稍微内缩）
-        sx, sy = _point(angle, max(score / 5 * max_r + 16, 20))
+        sx, sy = _point(angle, max(score / 5 * max_r + 12, 15))
         # 调整水平居中
         if angle == 90:
             lx, sx = cx, lx
         elif angle == 18:
-            lx += 4
+            lx += 3
             sx = lx
         elif angle == 162:
-            lx -= 4
+            lx -= 3
             sx = lx
         elif angle in (234, 306):
             sx = lx

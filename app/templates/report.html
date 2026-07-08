@@ -250,12 +250,12 @@ body {
 .pentagon-wrap {
   display: flex;
   gap: 32px;
-  align-items: flex-start;
+  align-items: center;
   flex-wrap: wrap;
 }
 .pentagon-chart {
   flex-shrink: 0;
-  width: 320px;
+  width: 220px;
 }
 .pentagon-chart svg {
   display: block;
@@ -599,7 +599,7 @@ body {
 
     <div class="pentagon-wrap">
       <div class="pentagon-chart">
-        <svg viewBox="0 0 370 420" xmlns="http://www.w3.org/2000/svg">
+        <svg viewBox="0 0 260 300" xmlns="http://www.w3.org/2000/svg">
           <!-- 网格五边形 -->
           {% for g in pentagon.grids %}
           <polygon points="{{ g.points }}" fill="none" stroke="{{ '#dfe1e6' if g.level < 5 else '#c1c7d0' }}" stroke-width="{{ 1.5 if g.level < 5 else 2 }}"/>
