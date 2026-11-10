@@ -33,6 +33,9 @@ BINARY_EXTENSIONS: tuple[str, ...] = (
 # 最大单文件扫描大小 (5MB)
 MAX_FILE_SIZE = 5 * 1024 * 1024
 
+# 最大累计解压文本大小 (50MB)，防止 zip 炸弹
+MAX_TOTAL_TEXT_SIZE = 50 * 1024 * 1024
+
 # SKILL.md 文件名变体
 SKILL_MD_NAMES: tuple[str, ...] = ("SKILL.md", "skill.md", "README.md")
 
@@ -76,6 +79,7 @@ def safe_read_zip(zip_path: str, slug: str = "") -> ZipReaderResult:
                              zip_path=zip_path)
 
     try:
+        total_text_size = 0
         with zipfile.ZipFile(zip_path, "r") as zf:
             for entry in zf.infolist():
                 fname = entry.filename
@@ -104,6 +108,12 @@ def safe_read_zip(zip_path: str, slug: str = "") -> ZipReaderResult:
                 # 跳过超大文件
                 if entry.file_size > MAX_FILE_SIZE:
                     continue
+
+                # 累计解压大小检查，防止 zip 炸弹
+                total_text_size += entry.file_size
+                if total_text_size > MAX_TOTAL_TEXT_SIZE:
+                    result.error = "解压后文本总大小超过 50MB 限制，疑似 zip 炸弹"
+                    break
 
                 # 读取文本内容
                 try:

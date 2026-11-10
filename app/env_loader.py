@@ -4,7 +4,7 @@
 策略：
   1. 检查环境变量 APP_ENV（dev / test / prod），默认 dev
   2. 读取与 `app/` 同级的 `.env.{APP_ENV}` 文件
-  3. 不覆盖已存在的环境变量（os.environ 优先级更高）
+  3. 覆盖已存在的环境变量
   4. 文件路径使用相对路径计算，支持作为子目录挂载
 """
 from __future__ import annotations
@@ -54,11 +54,7 @@ def load_env() -> None:
             if not key:
                 continue
 
-            # 不覆盖已存在的环境变量
-            if key in os.environ:
-                skipped += 1
-                continue
-
+            # 强制覆盖已存在的环境变量（包括空值）
             os.environ[key] = value
             loaded += 1
 

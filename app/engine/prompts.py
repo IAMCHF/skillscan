@@ -32,7 +32,7 @@ TRACE 是 SkillHub 首发的 AI Skill 质量评测标准，从五个维度评估
 - security（安全检测）：代码中是否有安全漏洞？是否依赖不可信的外部资源？
 - minimal_permission（最小权限）：权限申请是否仅限于功能所需？有无多余权限？
 - sensitive_data（敏感信息保护）：是否硬编码凭据？是否会泄露用户数据？有无 .env / token / password 明文？
-- availability（国内可用性）：是否依赖境外服务（Google、OpenAI 等）？是否支持中文？是否需要翻墙？
+- availability（比亚迪内网可用性）：是否依赖外网服务（任何非比亚迪内网链接或者外部互联网的服务。但是大模型api、常见开发工具包库比如npm安装、pip安装等可进行安全豁免，内部有可用大模型api及pip源、npm源）？是否支持中文？是否需要访问外部互联网？
 
 ### R — Reliability（可靠性）
 - stability（稳定运行）：代码逻辑是否健壮？是否有多余的异常路径？
@@ -81,10 +81,20 @@ TRACE 是 SkillHub 首发的 AI Skill 质量评测标准，从五个维度评估
 5. **凭据泄露**：代码或配置中是否硬编码了 API Key、Token、密码、私钥？
 6. **远程脚本**：是否远程加载可执行脚本（curl | sh、Invoke-WebRequest | iex 等）？
 
+### 安全发现 severity 分级（必须严格遵守）
+- "critical" — 严重（明显的恶意代码、严重安全漏洞）
+- "warning" — 警告（存在潜在风险，需关注）
+- "info" — 信息（文档引用、无实际风险的提示）
+
 安全审查结论：
 - "安全" — 未发现任何安全风险
 - "存在潜在风险" — 发现了需关注的项但不确定是否恶意
 - "不安全" — 存在明显恶意代码或严重安全漏洞
+## 输出规则（必须遵守）
+**verdict 字段只能是以下三者之一**：
+- "通过" — TRACE 综合评分≥3.5 且 security_level="安全"
+- "有条件通过" — TRACE 综合评分 2.5-3.4，或 security_level="存在潜在风险"
+- "淘汰" — TRACE 综合评分<2.5，或 security_level="不安全"，或 SKILL.md 格式错误
 
 ## 输出格式（严格 JSON）
 
@@ -95,6 +105,20 @@ TRACE 是 SkillHub 首发的 AI Skill 质量评测标准，从五个维度评估
   "verdict_reason": "综合 TRACE 评分较高，未发现安全风险",
   "security_level": "安全",
   "security_findings": [
+    {
+      "severity": "critical",
+      "category": "凭据泄露",
+      "description": "config.json 中硬编码了 AWS Access Key",
+      "file_path": "config.json",
+      "suggestion": "应使用环境变量或密钥管理服务"
+    },
+    {
+      "severity": "warning",
+      "category": "网络请求",
+      "description": "代码中向外部服务器发送了用户输入数据",
+      "file_path": "main.py",
+      "suggestion": "建议增加数据脱敏或确认用户知情"
+    },
     {
       "severity": "info",
       "category": "网络请求",
@@ -107,7 +131,7 @@ TRACE 是 SkillHub 首发的 AI Skill 质量评测标准，从五个维度评估
     {
       "dimension": "trust",
       "score": 4.5,
-      "findings_summary": "该技能不涉及网络请求和系统命令执行，遵循最小权限原则，未发现硬编码凭据。但依赖 GitHub 文档站点，国内可能访问受限。",
+      "findings_summary": "该技能不涉及网络请求和系统命令执行，遵循最小权限原则，未发现硬编码凭据。但依赖 GitHub 文档站点，内网可能访问受限。",
       "sub_indicators": [
         {"key": "security", "score": 5, "comment": "..."},
         {"key": "minimal_permission", "score": 5, "comment": "..."},

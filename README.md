@@ -119,20 +119,12 @@ curl -X POST "http://localhost:8000/scan?slug=my-skill&name=MySkill&category=dev
     }
   ],
   "security_labs": [
-    { "name": "科恩实验室", "result": "深度漏洞扫描完成", "status": "pass" },
-    { "name": "云鼎实验室", "result": "AI 模型安全评估完成", "status": "pass" }
+    { "name": "SKILL 文档格式检测", "result": "格式检测通过", "status": "pass" },
+    { "name": "AI 静态安全评估", "result": "评估完成", "status": "pass" }
   ],
 
   "verdict": "通过",
   "verdict_reason": "综合 TRACE 评分较高，未发现安全风险",
-
-  "fix_report": {
-    "zip_fixed": true,
-    "actions": ["文件名修正: skill.md → SKILL.md", "YAML frontmatter 缺少结尾 ---，已自动插入"],
-    "errors": [],
-    "extracted_name": "MySkill",
-    "extracted_desc": "技能描述..."
-  },
 
   "files_scanned": 12,
   "total_lines": 450,
@@ -144,12 +136,10 @@ curl -X POST "http://localhost:8000/scan?slug=my-skill&name=MySkill&category=dev
 
 ```
 zip 上传
-├── Step 0: 🔧 SKILL.md 格式检测与自动修复（无需 LLM）
-│           - 文件名大小写修正: skill.md → SKILL.md
-│           - YAML frontmatter 闭合修复: 缺少 --- 自动补全
-│           - 缺失字段补全: name/description 从上下文推断
+├── Step 0: 🔍 SKILL.md 格式检测（仅检测，格式不通过立即淘汰，不执行 TRACE）
+│           - 文件名大小写、YAML frontmatter 闭合、name/description 缺失
 ├── Step 1: 📦 安全读取 zip（仅提取文本，跳过二进制/超大文件）
-├── Step 2: 🏷️ 关键词分类检测（Slug+描述+全文+扩展名，无需 LLM）
+├── Step 2: 🏷️ LLM 分类检测（读取 SKILL.md 语义分类，LLM 不可用时降级关键词）
 ├── Step 3: ✍️ 构建 LLM 审查提示词
 ├── Step 4: 🧠 LLM 执行 TRACE 五维度语义分析
 ├── Step 5: 📋 解析 LLM 结构化 JSON 输出
@@ -204,14 +194,14 @@ SKILL.md 格式问题是企业内网平台上线的常见阻碍。SkillScan 在 
 | 保留 version | 原本有 `version: 1.0` | 保留不动 |
 | 不添加 version | 原本无 version | 不添加 |
 
-修复结果通过 `fix_report` 字段返回，包含修复动作列表和错误信息。修复后的 zip 用于后续评测，原始文件不被修改。
+通过 `POST /fix-skill` 上传 zip，返回 `skill_md_content`（修复后的完整文本）与 `fixed_zip_base64`（修复后的 zip，含目录结构修正：嵌套的 SKILL.md 及其他文件提升到根目录）。服务端不保留临时文件。
 
 ## HTML 报告预览
 
 - 📦 技能头部卡片（名称/作者/版本/下载量/星级评分）
 - 📊 TRACE 五维度卡片总览（彩色字母 + 得分进度条）
 - 📋 维度详解（每维 4 个子指标的评分柱 + LLM 分析摘要）
-- 🔒 安全审查（三线审核标记 + 安全发现列表）
+- 🔒 安全审查（审核步骤标记 + 安全发现列表）
 - 🏁 审查结论（通过/有条件通过/淘汰 + 汇总表）
 - 🔧 格式检测修复记录
 
@@ -226,14 +216,14 @@ SKILL.md 格式问题是企业内网平台上线的常见阻碍。SkillScan 在 
 ```
 skillscan/
 ├── app/
-│   ├── main.py                 # FastAPI 入口
+│   ├── main.py                 # FastAPI 入口（本地静态 Swagger UI）
 │   ├── report_renderer.py      # HTML 报告渲染器
 │   ├── routers/
-│   │   └── scan.py             # API 路由 (/scan + /health)
+│   │   └── scan.py             # API 路由 (/scan + /fix-skill + /health)
 │   ├── engine/
-│   │   ├── scanner.py          # 主编排器 (修复→读取→分类→LLM审核→组装)
-│   │   ├── skill_fixer.py      # SKILL.md 格式检测与自动修复 (无需LLM)
-│   │   ├── classifier.py       # 关键词分类检测引擎 (无需LLM)
+│   │   ├── scanner.py          # 主编排器 (格式检测→读取→分类→LLM审核→组装)
+│   │   ├── skill_fixer.py      # SKILL.md 格式检测/修复 + 修复后 zip 生成
+│   │   ├── classifier.py       # LLM 分类引擎（关键词降级）
 │   │   ├── llm_client.py       # OpenAI 兼容 LLM 客户端
 │   │   └── prompts.py          # TRACE 系统提示词 + 审核消息构建
 │   ├── models/
@@ -242,6 +232,7 @@ skillscan/
 │   │   └── report.html         # SkillHub 风格 Jinja2 报告模板
 │   └── utils/
 │       └── zip_reader.py       # 安全 zip 读取器 (仅提取文本)
+├── static/                     # 本地托管的 Swagger UI 静态资源
 ├── sample-report.html          # 假数据预览报告
 ├── FIELD-MAPPING.md            # 前端对接指南
 ├── requirements.txt

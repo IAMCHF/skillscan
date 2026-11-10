@@ -41,9 +41,9 @@ TRACE_LETTER: dict[str, str] = {
 }
 
 TRACE_COLORS: dict[str, str] = {
-    "trust": "#0052cc", "reliability": "#00875a",
-    "adaptability": "#e56910", "convention": "#6554c0",
-    "effectiveness": "#c9372c",
+    "trust": "#3b82f6", "reliability": "#10b981",
+    "adaptability": "#f59e0b", "convention": "#8b5cf6",
+    "effectiveness": "#ef4444",
 }
 
 # 每个维度的 4 个子指标
@@ -105,6 +105,7 @@ class SkillCategory(str, Enum):
 
 
 CATEGORY_DISPLAY_MAP = {c.value: SkillCategory.display(c.value) for c in SkillCategory}
+
 
 # ═══════════════════════════════════════════════════════
 # 审核结论
@@ -239,3 +240,4 @@ class FixSkillResponse(BaseModel):
     actions: list[str] = Field(default_factory=list)
     errors: list[str] = Field(default_factory=list)
     skill_md_content: str = ""
+    fixed_zip_base64: str = ""  # 修复后的 zip 文件（base64 编码）

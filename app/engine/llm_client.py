@@ -16,12 +16,11 @@ import httpx
 logger = logging.getLogger("skillscan.llm")
 
 # ─── 配置（环境变量）────────────────────────────────────
+# 注意：这些只作为 fallback，延迟读取由 LLMClient 构造函数处理
 
-DEFAULT_API_URL = os.getenv("LLM_API_URL", "https://api.openai.com/v1/chat/completions")
-DEFAULT_API_KEY = os.getenv("LLM_API_KEY", "")
-DEFAULT_MODEL = os.getenv("LLM_MODEL", "gpt-4o")
-DEFAULT_TIMEOUT = int(os.getenv("LLM_TIMEOUT", "120"))
-DEFAULT_MAX_TOKENS = int(os.getenv("LLM_MAX_TOKENS", "8192"))
+def _get_env(key: str, default: str) -> str:
+    """延迟读取环境变量，确保 env_loader 已完成加载"""
+    return os.getenv(key, default)
 
 # ─── JSON 提取 ──────────────────────────────────────────
 
@@ -58,27 +57,31 @@ class LLMClient:
 
     def __init__(
         self,
-        api_url: str = DEFAULT_API_URL,
-        api_key: str = DEFAULT_API_KEY,
-        model: str = DEFAULT_MODEL,
-        timeout: int = DEFAULT_TIMEOUT,
+        api_url: str | None = None,
+        api_key: str | None = None,
+        model: str | None = None,
+        timeout: int | None = None,
     ):
-        self.api_url = api_url
-        self.api_key = api_key
-        self.model = model
-        self.timeout = timeout
+        # 延迟读取环境变量，确保 env_loader 已完成加载
+        self.api_url = api_url or _get_env("LLM_API_URL", "https://api.openai.com/v1/chat/completions")
+        self.api_key = api_key or _get_env("LLM_API_KEY", "")
+        self.model = model or _get_env("LLM_MODEL", "gpt-4o")
+        self.timeout = timeout or int(_get_env("LLM_TIMEOUT", "120"))
 
     async def chat(
         self,
         system_prompt: str,
         user_message: str,
         temperature: float = 0.3,
-        max_tokens: int = DEFAULT_MAX_TOKENS,
+        max_tokens: int | None = None,
         expect_json: bool = True,
     ) -> LLMResponse:
         """发送聊天补全请求并解析响应"""
         if not self.api_key:
             return LLMResponse(success=False, error="LLM_API_KEY 未配置，请在环境变量中设置")
+
+        # 延迟读取 max_tokens
+        effective_max_tokens = max_tokens if max_tokens is not None else int(_get_env("LLM_MAX_TOKENS", "8192"))
 
         payload = {
             "model": self.model,
@@ -87,7 +90,7 @@ class LLMClient:
                 {"role": "user", "content": user_message},
             ],
             "temperature": temperature,
-            "max_tokens": max_tokens,
+            "max_tokens": effective_max_tokens,
         }
 
         t_start = time.perf_counter()
@@ -132,7 +135,9 @@ class LLMClient:
         except httpx.TimeoutException:
             return LLMResponse(success=False, error=f"LLM 请求超时 ({self.timeout}s)")
         except httpx.HTTPStatusError as e:
-            return LLMResponse(success=False, error=f"LLM API 错误 {e.response.status_code}")
+            # 显示完整错误信息，便于排查
+            error_detail = e.response.text[:500] if e.response.text else "无响应体"
+            return LLMResponse(success=False, error=f"LLM API 错误 {e.response.status_code}: {error_detail}")
         except Exception as e:
             return LLMResponse(success=False, error=str(e))
 

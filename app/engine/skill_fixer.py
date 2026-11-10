@@ -113,22 +113,23 @@ def analyze_skill_md(zip_path: str) -> FixReport:
 # 模式 B：检测 + 修复，返回修复后的文本内容
 # ═══════════════════════════════════════════════════════
 
-def fix_skill_content(zip_path: str) -> tuple[FixReport, str]:
+def fix_skill_content(zip_path: str) -> tuple[FixReport, str, Optional[str]]:
     """
-    检测并修复 SKILL.md，返回修复后的完整内容字符串。
+    检测并修复 SKILL.md，返回修复后的完整内容字符串和可选的修复后 zip 路径。
 
     Returns:
-        (FixReport, fixed_content_str)
+        (FixReport, fixed_content_str, fixed_zip_path)
         - FixReport.needs_fix = True 表示有修复操作
         - fixed_content_str 为修正后的完整 SKILL.md 文本
-          如果没有修复必要，则返回原始内容
+        - fixed_zip_path 为修复后的 zip 文件路径（如果修复了目录结构）
+          如果没有修复必要，则返回原始内容，fixed_zip_path 为 None
     """
     report = FixReport()
     original_filename, raw_content, errors = read_skill_md_from_zip(zip_path)
     report.errors = errors
 
     if raw_content is None:
-        return report, ""
+        return report, "", None
 
     content = raw_content
     need_rewrite = False
@@ -136,7 +137,7 @@ def fix_skill_content(zip_path: str) -> tuple[FixReport, str]:
     # 1. 文件名大小写修正（只记录，不改变内容）
     filename_fixed = False
     if original_filename and os.path.basename(original_filename) != "SKILL.md":
-        report.actions.append(f"文件名修正: {original_filename} → SKILL.md")
+        report.actions.append(f"文件名修正：{original_filename} → SKILL.md")
         filename_fixed = True
         need_rewrite = True
 
@@ -154,9 +155,9 @@ def fix_skill_content(zip_path: str) -> tuple[FixReport, str]:
 
     if not need_rewrite:
         # 无修复必要，返回原始内容
-        return report, raw_content
+        return report, raw_content, None
 
-    return report, content
+    return report, content, None
 
 
 # ═══════════════════════════════════════════════════════
@@ -270,7 +271,7 @@ def _guess_frontmatter_end(lines: list[str]) -> Optional[int]:
 def _ensure_required_fields(content: str, report: FixReport) -> tuple[str, bool]:
     """确保 YAML frontmatter 包含 name 和 description"""
     yaml_block, body = _extract_frontmatter(content)
-    if yaml_block is None:
+    if yaml_block is None or body is None:
         return content, False
 
     yaml_lines = yaml_block.strip("\n").split("\n")
@@ -291,13 +292,13 @@ def _ensure_required_fields(content: str, report: FixReport) -> tuple[str, bool]
         return content, False
 
     if not has_name:
-        inferred_name = _infer_name(fields, body)
+        inferred_name = _infer_name(fields, body or "")
         yaml_lines.append(f"name: {inferred_name}")
         fields["name"] = inferred_name
-        report.actions.append(f"YAML frontmatter 缺少 name 字段，已自动补全为: {inferred_name}")
+        report.actions.append(f"YAML frontmatter 缺少 name 字段，已自动补全为：{inferred_name}")
 
     if not has_desc:
-        inferred_desc = _infer_description(fields, body)
+        inferred_desc = _infer_description(fields, body or "")
         yaml_lines.append(f"description: {inferred_desc}")
         fields["description"] = inferred_desc
         report.actions.append(f"YAML frontmatter 缺少 description 字段，已自动补全")
@@ -329,3 +330,149 @@ def _infer_description(fields: dict[str, str], body: str) -> str:
         if found_title and stripped and not stripped.startswith("#") and not stripped.startswith(">"):
             return stripped[:200]
     return fields.get("name", "技能描述待补充")
+
+
+# ═══════════════════════════════════════════════════════
+# 模式 C：检测 + 修复内容 + 修复 zip 目录结构
+# ═══════════════════════════════════════════════════════
+
+def fix_skill_zip(zip_path: str, output_dir: Optional[str] = None) -> tuple[FixReport, str, str]:
+    """
+    检测并修复 SKILL.md，同时修复 zip 目录结构问题。
+
+    修复项：
+    1. SKILL.md 文件名大小写
+    2. YAML frontmatter 闭合
+    3. name/description 字段补全
+    4. **zip 目录结构**（SKILL.md 不在根目录时，移动到根目录）
+
+    Args:
+        zip_path: 原始 zip 文件路径
+        output_dir: 输出目录（默认使用临时目录）
+
+    Returns:
+        (FixReport, fixed_content_str, fixed_zip_path)
+        - FixReport: 修复报告
+        - fixed_content_str: 修复后的 SKILL.md 内容
+        - fixed_zip_path: 修复后的 zip 文件路径
+    """
+    report = FixReport()
+    original_filename, raw_content, errors = read_skill_md_from_zip(zip_path)
+    report.errors = errors
+
+    if raw_content is None:
+        return report, "", zip_path
+
+    content = raw_content
+    need_rewrite = False
+    need_zip_fix = False
+    skill_md_inner_path = ""
+
+    # 1. 检查 SKILL.md 是否在根目录
+    with zipfile.ZipFile(zip_path, "r") as zf:
+        entries = list(zf.infolist())
+        # 查找 SKILL.md 的实际路径
+        for entry in entries:
+            if entry.filename.endswith("/") or entry.filename.startswith("__"):
+                continue
+            basename = os.path.basename(entry.filename)
+            if basename.lower() == "skill.md":
+                skill_md_inner_path = entry.filename
+                # 检查是否在根目录
+                if "/" in skill_md_inner_path and not skill_md_inner_path.endswith("SKILL.md"):
+                    # 不在根目录，需要修复
+                    need_zip_fix = True
+                    report.actions.append(f"目录结构修正：SKILL.md 从嵌套目录移动到根目录")
+                break
+
+    # 2. 文件名大小写修正
+    filename_fixed = False
+    if original_filename and os.path.basename(original_filename) != "SKILL.md":
+        report.actions.append(f"文件名修正：{original_filename} → SKILL.md")
+        filename_fixed = True
+        need_rewrite = True
+
+    # 3. YAML frontmatter 闭合修复
+    content, frontmatter_fixed = _fix_yaml_frontmatter(content, report)
+    if frontmatter_fixed:
+        need_rewrite = True
+
+    # 4. name / description 字段补全
+    content, meta_fixed = _ensure_required_fields(content, report)
+    if meta_fixed:
+        need_rewrite = True
+
+    report.needs_fix = need_rewrite or filename_fixed or need_zip_fix
+
+    if not report.needs_fix:
+        # 无修复必要，返回原始内容
+        return report, raw_content, zip_path
+
+    # 5. 创建修复后的 zip 文件
+    import tempfile
+    import shutil
+
+    if output_dir is None:
+        output_dir = tempfile.gettempdir()
+
+    os.makedirs(output_dir, exist_ok=True)
+    base_name = os.path.splitext(os.path.basename(zip_path))[0]
+    fixed_zip_path = os.path.join(output_dir, f"{base_name}_fixed.zip")
+
+    # 复制原始 zip 并修复
+    _create_fixed_zip(zip_path, fixed_zip_path, skill_md_inner_path, content)
+
+    return report, content, fixed_zip_path
+
+
+def _create_fixed_zip(
+    src_zip_path: str,
+    dst_zip_path: str,
+    skill_md_inner_path: str,
+    fixed_content: str,
+) -> None:
+    """
+    创建修复后的 zip 文件。
+
+    修复策略：
+    1. SKILL.md 放到根目录
+    2. 其他所有文件也提升到根目录（去除嵌套目录前缀）
+
+    Args:
+        src_zip_path: 原始 zip 路径
+        dst_zip_path: 目标 zip 路径
+        skill_md_inner_path: SKILL.md 在原始 zip 中的路径（如 "my-skill/SKILL.md"）
+        fixed_content: 修复后的 SKILL.md 内容
+    """
+    with zipfile.ZipFile(src_zip_path, "r") as src_zf:
+        entries = list(src_zf.infolist())
+
+        # 计算需要去除的目录前缀
+        # 如果 SKILL.md 在 "my-skill/SKILL.md"，则前缀是 "my-skill/"
+        prefix_to_remove = ""
+        if skill_md_inner_path and "/" in skill_md_inner_path:
+            # 获取目录部分作为前缀
+            prefix_to_remove = os.path.dirname(skill_md_inner_path) + "/"
+
+        with zipfile.ZipFile(dst_zip_path, "w", compression=zipfile.ZIP_DEFLATED) as dst_zf:
+            # 先写入修复后的 SKILL.md 到根目录
+            dst_zf.writestr("SKILL.md", fixed_content)
+
+            # 复制其他文件，去除嵌套目录前缀
+            for entry in entries:
+                if entry.filename.endswith("/"):
+                    # 跳过目录
+                    continue
+
+                # 跳过原始的 SKILL.md（已经用修复后的版本替代）
+                if entry.filename == skill_md_inner_path:
+                    continue
+
+                # 计算新路径（去除前缀）
+                new_path = entry.filename
+                if prefix_to_remove and entry.filename.startswith(prefix_to_remove):
+                    new_path = entry.filename[len(prefix_to_remove):]
+
+                # 读取并写入
+                data = src_zf.read(entry.filename)
+                dst_zf.writestr(new_path, data)

@@ -19,7 +19,7 @@ from typing import Optional
 
 from app.models.schemas import (
     SkillScanResult, DimensionScore, SubIndicatorScore,
-    SecurityFinding, ClassificationResult, SkillCategory, FixReportModel,
+    SecurityFinding, ClassificationResult, FixReportModel,
     TRACE_DISPLAY, TRACE_LETTER, TRACE_COLORS,
     CATEGORY_DISPLAY_MAP,
 )
@@ -74,7 +74,11 @@ async def scan_single_skill(
         skill_md_content=zip_result.skill_md_content,
         slug=slug, name=name, description=desc,
         original_category=meta.get("category", ""),
-        file_extensions=list({os.path.splitext(e.path)[1] for e in zip_result.files if os.path.splitext(e.path)[1]}),
+        file_extensions=list({
+            os.path.splitext(e.path)[1]
+            for e in zip_result.files
+            if os.path.splitext(e.path)[1]
+        }),
     )
 
     # ── Step 3: 构建 LLM 审查请求 ──
@@ -135,7 +139,7 @@ async def scan_single_skill(
         overall_score=overall,
         security_level=security_level,
         security_findings=security_findings,
-        security_labs=_default_security_labs(),
+        security_labs=_build_security_labs(format_ok=True, llm_ok=llm_response.success),
         verdict=verdict,
         verdict_reason=verdict_reason,
         files_scanned=zip_result.total_text_files,
@@ -214,9 +218,13 @@ def _parse_llm_result(resp: LLMResponse):
                 sub_indicators=[],
                 findings_summary=f"LLM 分析失败: {resp.error}" if resp.error else "未完成分析",
             ))
-        security_level = "存在潜在风险"
-        verdict = "有条件通过"
-        verdict_reason = f"LLM 分析不可用: {resp.error}" if resp.error else "LLM 服务未响应"
+        # fail-closed：审核未完成时按安全原则拒绝，绝不放行
+        security_level = "不安全"
+        verdict = "淘汰"
+        verdict_reason = (
+            f"审核未完成（LLM 分析不可用: {resp.error}），按安全原则拒绝，请重试或转人工复核"
+            if resp.error else "审核未完成（LLM 服务未响应），按安全原则拒绝，请重试或转人工复核"
+        )
 
     return trace_scores, overall, security_findings, security_level, verdict, verdict_reason
 
@@ -241,8 +249,17 @@ def _error_result(slug: str, meta: dict, error: str, elapsed: float) -> SkillSca
     )
 
 
-def _default_security_labs() -> list[dict]:
+def _build_security_labs(format_ok: bool, llm_ok: bool) -> list[dict]:
+    """如实反映实际执行的审核步骤与结果，不伪造通过状态"""
     return [
-        {"name": "科恩实验室", "result": "深度漏洞扫描完成", "status": "pass"},
-        {"name": "云鼎实验室", "result": "AI 模型安全评估完成", "status": "pass"},
+        {
+            "name": "SKILL 文档格式检测",
+            "result": "格式检测通过" if format_ok else "格式检测未通过",
+            "status": "pass" if format_ok else "fail",
+        },
+        {
+            "name": "AI 静态安全评估",
+            "result": "评估完成" if llm_ok else "评估失败，结论不可用",
+            "status": "pass" if llm_ok else "error",
+        },
     ]

@@ -11,10 +11,26 @@ from fastapi import APIRouter, UploadFile, File, HTTPException, Query
 from typing import Optional
 
 from app.engine.scanner import scan_single_skill
-from app.engine.skill_fixer import fix_skill_content
+from app.engine.skill_fixer import fix_skill_zip
 from app.models.schemas import FixSkillResponse
 
 router = APIRouter(prefix="", tags=["SkillScan"])
+
+# 最大上传文件大小 (50MB)，防止超大文件占满内存
+MAX_UPLOAD_SIZE = 50 * 1024 * 1024
+
+
+async def _save_upload_to_tmp(file: UploadFile, prefix: str) -> str:
+    """流式保存上传文件到临时路径，超过大小限制立即终止"""
+    tmp_path = os.path.join(tempfile.gettempdir(), f"{prefix}_{uuid.uuid4().hex}.zip")
+    size = 0
+    with open(tmp_path, "wb") as f:
+        while chunk := await file.read(1024 * 1024):
+            size += len(chunk)
+            if size > MAX_UPLOAD_SIZE:
+                raise HTTPException(status_code=413, detail="文件过大，最大支持 50MB")
+            f.write(chunk)
+    return tmp_path
 
 
 @router.post("/scan", summary="TRACE 审核单个技能")
@@ -39,17 +55,17 @@ async def scan_skill(
     if not file.filename or not file.filename.endswith(".zip"):
         raise HTTPException(status_code=400, detail="请上传 .zip 格式的技能包")
 
-    tmp_path = os.path.join(tempfile.gettempdir(), f"skillscan_{uuid.uuid4().hex}.zip")
+    tmp_path = await _save_upload_to_tmp(file, "skillscan")
     try:
-        with open(tmp_path, "wb") as f:
-            f.write(await file.read())
-
         metadata = {
             "slug": slug or os.path.splitext(file.filename)[0],
-            "name": name or "", "category": category or "",
-            "stars": stars or 0, "owner_name": author or "",
+            "name": name or "",
+            "category": category or "",
+            "stars": stars or 0,
+            "owner_name": author or "",
             "description_zh": description_zh or "",
-            "version": version or "", "downloads": downloads or 0,
+            "version": version or "",
+            "downloads": downloads or 0,
             "updated_at": updated_at or "",
         }
         return await scan_single_skill(tmp_path, metadata)
@@ -66,29 +82,46 @@ async def fix_skill(
     """
     上传技能 zip，检测 SKILL.md 格式问题并自动修复。
 
-    返回修复后的 SKILL.md 完整内容（字符串），服务器不保存临时文件。
-    用户可将返回的 skill_md_content 复制后替换本地文件。
+    返回修复后的 SKILL.md 完整内容和修复后的 zip 文件（base64 编码）。
+    修复项包括：
+    1. SKILL.md 文件名大小写
+    2. YAML frontmatter 闭合
+    3. name/description 字段补全
+    4. **zip 目录结构**（SKILL.md 移动到根目录）
     """
     if not file.filename or not file.filename.endswith(".zip"):
         raise HTTPException(status_code=400, detail="请上传 .zip 格式的技能包")
 
     slug_val = slug or os.path.splitext(file.filename)[0]
-    tmp_path = os.path.join(tempfile.gettempdir(), f"skillscan_fix_{uuid.uuid4().hex}.zip")
-    try:
-        with open(tmp_path, "wb") as f:
-            f.write(await file.read())
+    tmp_path: Optional[str] = None
+    fixed_zip_path = None
 
-        report, fixed_content = fix_skill_content(tmp_path)
+    try:
+        tmp_path = await _save_upload_to_tmp(file, "skillscan_fix")
+
+        report, fixed_content, fixed_zip_path = fix_skill_zip(tmp_path)
+
+        # 如果有修复后的 zip 文件，进行 base64 编码
+        fixed_zip_base64 = None
+        if fixed_zip_path and os.path.exists(fixed_zip_path):
+            with open(fixed_zip_path, "rb") as f:
+                import base64
+                fixed_zip_base64 = base64.b64encode(f.read()).decode("utf-8")
+
         return FixSkillResponse(
             slug=slug_val,
             needs_fix=report.needs_fix,
             actions=report.actions,
             errors=report.errors,
             skill_md_content=fixed_content,
+            fixed_zip_base64=fixed_zip_base64 or "",
         )
+
     finally:
-        if os.path.exists(tmp_path):
-            os.remove(tmp_path)
+        # 清理临时文件
+        for path in [tmp_path, fixed_zip_path]:
+            if path and os.path.exists(path):
+                os.remove(path)
 
 
 @router.get("/health")

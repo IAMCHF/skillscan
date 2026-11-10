@@ -30,8 +30,8 @@
 | 收藏量 | (暂不展示，预留) | - |
 | AI 评分 | `overall_score` | float |
 | 作者 | `author` | string |
-| 科恩实验室 | `security_labs[0]` → `name`, `result`, `status` | string |
-| 云鼎实验室 | `security_labs[1]` → `name`, `result`, `status` | string |
+| SKILL 文档格式检测 | `security_labs[0]` → `name`, `result`, `status` | string |
+| AI 静态安全评估 | `security_labs[1]` → `name`, `result`, `status` | string |
 
 ### 3. TRACE 五维度卡片
 
